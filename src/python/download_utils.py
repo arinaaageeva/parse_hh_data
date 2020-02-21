@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 from requests.exceptions import HTTPError, ConnectionError
 from random_user_agent.user_agent import UserAgent
 from random_user_agent.params import SoftwareName, OperatingSystem
-from parse.parse_utils import parse_num_pages, parse_resume_ids
+from parse_utils import parse_num_pages, parse_resume_hashes
 
 SOFTWARE_NAMES = [SoftwareName.CHROME.value]
 OPERATING_SYSTEMS = [OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value]
@@ -154,13 +154,13 @@ def download_specialization_resume_ids(area_id, specialization_id, search_period
     try:
         page = download_resume_search_page(area_id, specialization_id, search_period, 0,
                                            requests_interval, max_requests_number)
-        resume_ids.extend(parse_resume_ids(page))
+        resume_ids.extend(parse_resume_hashes(page))
         num_pages = parse_num_pages(page) if num_pages is None else min(num_pages, parse_num_pages(page))
 
         for num_page in tqdm(range(1, num_pages), file=sys.stdout):
             page = download_resume_search_page(area_id, specialization_id, search_period, num_page,
                                                requests_interval, max_requests_number)
-            resume_ids.extend(parse_resume_ids(page))
+            resume_ids.extend(parse_resume_hashes(page))
 
     except HTTPError as http_error:
         print(f"HTTP error occurred: {http_error}", file=sys.stderr)
@@ -205,6 +205,9 @@ def download_specialization_vacancy_ids(area_id, specialization_id, search_perio
     :return: list
     """
     vacancy_ids = []
+
+    if num_pages is None:
+        num_pages = 19
 
     for num_page in tqdm(range(num_pages), file=sys.stdout):
         page = download_vacancy_search_page(area_id, specialization_id, search_period, num_page,
