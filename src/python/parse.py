@@ -18,11 +18,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    try:
-        os.mkdir(os.path.join(args.path_json, args.directory))
-    except FileExistsError:
-        pass
-
     with open(args.path_specializations) as fl:
         specializations = json.load(fl)
 
