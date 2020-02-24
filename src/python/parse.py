@@ -14,13 +14,28 @@ if __name__ == "__main__":
     parser.add_argument("path_html")
     parser.add_argument("path_json")
     parser.add_argument("directory")
+    parser.add_argument("path_specializations")
 
     args = parser.parse_args()
+
+    try:
+        os.mkdir(os.path.join(args.path_json, args.directory))
+    except FileExistsError:
+        pass
+
+    with open(args.path_specializations) as fl:
+        specializations = json.load(fl)
 
     for file in tqdm(os.listdir(os.path.join(args.path_html, args.directory)), file=sys.stdout):
         with open(os.path.join(args.path_html, args.directory, file)) as fl:
             page = BeautifulSoup(fl.read(), 'html.parser')
 
-        file = f"{file[:-5]}.json"
-        with open(os.path.join(args.path_json, args.directory, file), "w") as fl:
-            json.dump(parse_resume(page), fl)
+        try:
+            page = parse_resume(page, specializations)
+            with open(os.path.join(args.path_json, args.directory, f"{file[:-5]}.json"), "w") as fl:
+                json.dump(page, fl)
+
+        except KeyError as key_error:
+            print(f"Key error occurred: {key_error}", file=sys.stderr)
+            print(f"Delete file {file} from {os.path.join(args.path_html, args.directory)}")
+            os.remove(os.path.join(args.path_html, args.directory, file))
