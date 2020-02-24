@@ -140,6 +140,10 @@ def download_vacancy_ids(area_id, specialization_ids, search_period, num_pages, 
     for specialization_id in tqdm(specialization_ids, file=sys.stdout):
         for num_page in tqdm(range(num_pages), file=sys.stdout):
             page = vacancy_search_page(area_id, specialization_id, search_period, num_page, **kwargs)
+
+            if not page["items"]:
+                break
+
             ids.extend([item["id"] for item in page["items"]])
 
     return list(set(ids))
