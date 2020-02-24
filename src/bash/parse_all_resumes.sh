@@ -9,5 +9,5 @@ do
   dir=`basename $dir`
   echo "Parse $dir directory"
   mkdir $DATA_PATH/resumes/json/$dir
-  $PYTHON $SRC_PATH/parse.py $DATA_PATH/resumes/raw $DATA_PATH/resumes/json $dir
+  $PYTHON $SRC_PATH/parse.py $DATA_PATH/resumes/raw $DATA_PATH/resumes/json $dir $DATA_PATH/specializations.json
 done
