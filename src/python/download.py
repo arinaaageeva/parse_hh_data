@@ -47,9 +47,9 @@ if __name__ == "__main__":
         specializations = [pofarea["specializations"] for pofarea in specializations]
         specializations = [specialization["id"] for specialization in chain(*specializations)]
 
-        if args.data == "vacancy":
+        if args.data == "vacancies":
             queue = download_vacancy_ids(args.area_id, specializations, args.search_period, args.num_pages, **download_params)
-        else:
+        if args.data == "resumes":
             queue = download_resume_ids(args.area_id, specializations, args.search_period, args.num_pages, **download_params)
 
         with open(os.path.join(args.path, "queue.json"), "w") as fl:
@@ -61,19 +61,19 @@ if __name__ == "__main__":
     queue = set(queue) - set(downloaded_ids)
     for item_id in tqdm(queue, file=sys.stdout):
         try:
-            if args.data == "vacancy":
+            if args.data == "vacancies":
                 item = vacancy(item_id, **download_params)
-            else:
+            if args.data == "resumes":
                 item = resume(item_id, **download_params)
 
         except HTTPError as http_error:
             print(f"HTTP error occurred: {http_error}", file=sys.stderr)
 
         else:
-            if args.data == "vacancy":
+            if args.data == "vacancies":
                 item_id = f"{item_id}.json"
                 item = json.dumps(item)
-            else:
+            if args.data == "resumes":
                 item_id = f"{item_id}.html"
                 item = str(item)
 
