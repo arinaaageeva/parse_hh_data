@@ -80,4 +80,4 @@ if __name__ == "__main__":
             with open(os.path.join(args.path, args.directory, item_id), "w") as fl:
                 fl.write(item)
 
-    os.remove(os.path.join(args.path_resumes, "queue.json"))
+    os.remove(os.path.join(args.path, "queue.json"))
