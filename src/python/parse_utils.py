@@ -161,9 +161,3 @@ def parse_resume(page, specializations):
     resume["experiences"] = parse_experiences(page)
 
     return resume
-
-
-
-
-
-
