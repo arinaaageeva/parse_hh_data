@@ -6,7 +6,7 @@ import argparse
 from tqdm import tqdm
 from itertools import chain
 from requests.exceptions import HTTPError
-from download_utils import download_specializations, download_resume_ids, download_vacancy_ids, download_vacancy, download_resume
+from download_utils import specializations, download_vacancy_ids, download_resume_ids, vacancy, resume
 
 if __name__ == "__main__":
 
@@ -22,31 +22,19 @@ if __name__ == "__main__":
     parser.add_argument("--num_pages", type=int, default=None)
     parser.add_argument("--requests_interval", type=int, default=10)
     parser.add_argument("--max_requests_number", type=int, default=100)
+    parser.add_argument("--break_reasons", nargs='+', default=['Forbidden'])
 
     args = parser.parse_args()
+
+    download_params = {"requests_interval": args.requests_interval,
+                       "max_requests_number": args.max_requests_number,
+                       "break_reasons": args.break_reasons}
 
     # Download specializations
 
     if args.update_specializations:
-        specializations = download_specializations(args.requests_interval, args.max_requests_number)
         with open(args.path_specializations, "w") as fl:
-            json.dump(specializations, fl)
-
-    # Initialize functions
-
-    if args.data == "vacancies":
-        download_ids = download_vacancy_ids
-        download_item = download_vacancy
-        create_name = lambda item_id: f"{item_id}.json"
-        dump = lambda item: json.dumps(item)
-
-    else:
-        download_ids = download_resume_ids
-        download_item = download_resume
-        create_name = lambda item_id: f"{item_id}.html"
-        dump = lambda item: str(item)
-
-    # Read or create download queue
+            json.dump(specializations(**download_params), fl)
 
     try:
         with open(os.path.join(args.path, "queue.json")) as fl:
@@ -59,8 +47,10 @@ if __name__ == "__main__":
         specializations = [pofarea["specializations"] for pofarea in specializations]
         specializations = [specialization["id"] for specialization in chain(*specializations)]
 
-        queue = download_ids(args.area_id, specializations, args.search_period, args.num_pages,
-                             args.requests_interval, args.max_requests_number)
+        if args.data == "vacancy":
+            queue = download_vacancy_ids(args.area_id, specializations, args.search_period, args.num_pages, **download_params)
+        else:
+            queue = download_resume_ids(args.area_id, specializations, args.search_period, args.num_pages, **download_params)
 
         with open(os.path.join(args.path, "queue.json"), "w") as fl:
             json.dump({"ids": queue}, fl)
@@ -71,11 +61,23 @@ if __name__ == "__main__":
     queue = set(queue) - set(downloaded_ids)
     for item_id in tqdm(queue, file=sys.stdout):
         try:
-            item = download_item(item_id, args.requests_interval, args.max_requests_number)
+            if args.data == "vacancy":
+                item = vacancy(item_id, **download_params)
+            else:
+                item = resume(item_id, **download_params)
+
         except HTTPError as http_error:
             print(f"HTTP error occurred: {http_error}", file=sys.stderr)
+
         else:
-            with open(os.path.join(args.path, args.directory, create_name(item_id)), "w") as fl:
-                fl.write(dump(item))
+            if args.data == "vacancy":
+                item_id = f"{item_id}.json"
+                item = json.dumps(item)
+            else:
+                item_id = f"{item_id}.html"
+                item = str(item)
+
+            with open(os.path.join(args.path, args.directory, item_id), "w") as fl:
+                fl.write(item)
 
     os.remove(os.path.join(args.path_resumes, "queue.json"))

@@ -18,7 +18,7 @@ def parse_resume_hashes(page):
     page = page.find("div", {"data-qa": "resume-serp__results-search"})
 
     if page is not None:
-        hashes = hashes.findAll("div", {"data-qa": "resume-serp__resume"})
+        hashes = page.findAll("div", {"data-qa": "resume-serp__resume"})
         hashes = [item["data-hh-resume-hash"] for item in hashes]
 
     return hashes
@@ -37,7 +37,7 @@ def parse_name(position):
     :param bs4.Tag position: position block
     :return: str
     """
-    name = position.find("span", {"class": "resume-block__title-text resume-block__title-text_position",
+    name = position.find("span", {"class": "resume-block__title-text",
                                   "data-qa": "resume-block-title-position"})
     name = name.getText()
 

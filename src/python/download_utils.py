@@ -3,9 +3,8 @@ import time
 import json
 import requests
 
-sys.path.append("src/python")
-
 from tqdm import tqdm
+from functools import wraps
 from bs4 import BeautifulSoup
 from requests.exceptions import HTTPError, ConnectionError
 from random_user_agent.user_agent import UserAgent
@@ -23,52 +22,86 @@ RESUME_PAGE_URL = "https://hh.ru/search/resume?area={}&specialization={}&search_
 VACANCY_PAGE_URL = "https://api.hh.ru/vacancies?area={}&specialization={}&period={}&page={}&per_page=100"
 
 
-def repeat_request(url, requests_interval=10, max_requests_number=100, break_reasons=None):
+def download(get_url):
+    @wraps(get_url)
+    def wrapper(*args, requests_interval=10, max_requests_number=100, break_reasons=None):
+        """
+        :param int requests_interval: time interval between requests (sec.)
+        :param int max_requests_number: maximum number of requests
+        :param list break_reasons: list of reasons
+        """
+        url = get_url(*args)
+        break_reasons = set() if break_reasons is None else set(break_reasons)
+
+        for _ in range(max_requests_number):
+            try:
+                request = requests.get(url, headers={'User-Agent': USER_AGENT.get_random_user_agent()})
+                request.raise_for_status()
+            except ConnectionError as connection_error:
+                print(f"Connection error occurred: {connection_error}", file=sys.stderr)
+            except HTTPError as http_error:
+                print(f"HTTP error occurred: {http_error}", file=sys.stderr)
+                if request.reason in break_reasons:
+                    break
+            else:
+                return request.content
+
+            print(f"A second request to the {url} will be sent in {requests_interval} seconds")
+            time.sleep(requests_interval)
+
+        raise HTTPError(f"Page on this {url} has not been downloaded")
+    return wrapper
+
+
+def load_json(get_content):
+    @wraps(get_content)
+    def wrapper(*args, **kwargs):
+        return json.loads(get_content(*args, **kwargs))
+    return wrapper
+
+
+def parse_html(get_content):
+    @wraps(get_content)
+    def wrapper(*args, **kwargs):
+        return BeautifulSoup(get_content(*args, **kwargs), "html.parser")
+    return wrapper
+
+
+@load_json
+@download
+def specializations():
     """
-    :param str url: url for request
-    :param int requests_interval: time interval between requests (sec.)
-    :param int max_requests_number: maximum number of requests
-    :param list break_reasons: list of reasons
-    :return:str
+    :return: str
     """
-    if break_reasons is None:
-        break_reasons = []
-    break_reasons = set(break_reasons)
-
-    for _ in range(max_requests_number):
-        try:
-            request = requests.get(url, headers={'User-Agent': USER_AGENT.get_random_user_agent()})
-            request.raise_for_status()
-        except ConnectionError as connection_error:
-            print(f"Connection error occurred: {connection_error}", file=sys.stderr)
-        except HTTPError as http_error:
-            print(f"HTTP error occurred: {http_error}", file=sys.stderr)
-            if request.reason in break_reasons:
-                break
-        else:
-            return request.content
-
-        print(f"A second request to the {url} will be sent in {requests_interval} seconds")
-        time.sleep(requests_interval)
-
-    raise HTTPError(f"Page on this {url} has not been downloaded")
+    return SPECIALIZATIONS_URL
 
 
-def download_specializations(requests_interval=10, max_requests_number=100):
+@load_json
+@download
+def vacancy_search_page(area_id, specialization_id, search_period, num_page):
     """
-    :param int requests_interval: time interval between requests (sec.)
-    :param int max_requests_number: maximum number of requests
-    :return: dict
+    :param area_id: area identifier from https://api.hh.ru/areas
+    :param specialization_id: specialization identifier from https://api.hh.ru/specializations
+    :param int search_period: the number of days for search, max value 30
+    :param num_page: page number
+    :return: str
     """
-    url = SPECIALIZATIONS_URL
-    page_content = repeat_request(url, requests_interval, max_requests_number)
-    page_content = json.loads(page_content)
-
-    return page_content
+    return VACANCY_PAGE_URL.format(area_id, specialization_id, search_period, num_page)
 
 
-def download_resume_search_page(area_id, specialization_id, search_period, num_page,
-                                requests_interval=10, max_requests_number=100):
+@load_json
+@download
+def vacancy(identifier):
+    """
+    :param str identifier: vacancy identifier
+    :return: str
+    """
+    return VACANCY_URL.format(identifier)
+
+
+@parse_html
+@download
+def resume_search_page(area_id, specialization_id, search_period, num_page):
     """
     :param str area_id: area identifier from https://api.hh.ru/areas
     :param str specialization_id: specialization identifier from https://api.hh.ru/specializations
@@ -77,164 +110,56 @@ def download_resume_search_page(area_id, specialization_id, search_period, num_p
                               3 - three days, 7 - week, 30 - month, 365 - year,
                               all other values are equivalent 0
     :param int num_page: page number
-    :param int requests_interval: time interval between requests (sec.)
-    :param int max_requests_number: maximum number of requests
-    :return: bs4.BeautifulSoup
+    :return: str
     """
-    url = RESUME_PAGE_URL.format(area_id, specialization_id, search_period, num_page)
-    page_content = repeat_request(url, requests_interval, max_requests_number)
-    page_content = BeautifulSoup(page_content, 'html.parser')
-
-    return page_content
+    return RESUME_PAGE_URL.format(area_id, specialization_id, search_period, num_page)
 
 
-def download_vacancy_search_page(area_id, specialization_id, search_period, num_page,
-                                 requests_interval=10, max_requests_number=100):
-    """
-    :param str area_id: area identifier from https://api.hh.ru/areas
-    :param str specialization_id: specialization identifier from https://api.hh.ru/specializations
-    :param int search_period: the number of days for search, max value 30
-    :param int num_page: page number, max value 19
-    :param int requests_interval: time interval between requests (sec.)
-    :param int max_requests_number: maximum number of requests
-    :return: dict
-    """
-    url = VACANCY_PAGE_URL.format(area_id, specialization_id, search_period, num_page)
-    page_content = repeat_request(url, requests_interval, max_requests_number)
-    page_content = json.loads(page_content)
-
-    return page_content
-
-
-def download_resume(identifier, requests_interval=10, max_requests_number=100, break_reasons={"Forbidden"}):
+@parse_html
+@download
+def resume(identifier):
     """
     :param str identifier: resume identifier
-    :param int requests_interval: time interval between requests (sec.)
-    :param int max_requests_number: maximum number of requests
-    :param list break_reasons: list of reasons
-    :return: bs4.BeautifulSoup
+    :return: str
     """
-    url = RESUME_URL.format(identifier)
-    page_content = repeat_request(url, requests_interval, max_requests_number, break_reasons)
-    page_content = BeautifulSoup(page_content, 'html.parser')
-
-    return page_content
+    return RESUME_URL.format(identifier)
 
 
-def download_vacancy(identifier, requests_interval=10, max_requests_number=100):
+def download_vacancy_ids(area_id, specialization_ids, search_period, num_pages, **kwargs):
     """
-    :param str identifier: vacancy identifier
-    :param int requests_interval: time interval between requests (sec.)
-    :param int max_requests_number: maximum number of requests
-    :return: dict
-    """
-    url = VACANCY_URL.format(identifier)
-    page_content = repeat_request(url, requests_interval, max_requests_number)
-    page_content = json.loads(page_content)
-
-    return page_content
-
-
-def download_specialization_resume_ids(area_id, specialization_id, search_period, num_pages,
-                                       requests_interval=10, max_requests_number=100):
-    """
-    :param str area_id: area identifier from https://api.hh.ru/areas
-    :param str specialization_id: specialization identifier from https://api.hh.ru/specializations
-    :param int search_period: the number of days for search,
-                              available values: 0 - all period, 1 - day,
-                              3 - three days, 7 - week, 30 - month, 365 - year,
-                              all other values are equivalent 0
-    :param int num_pages: number of pages
-    :param int requests_interval: time interval between requests (sec.)
-    :param int max_requests_number: maximum number of requests
+    :param area_id:
+    :param specialization_ids:
+    :param search_period:
+    :param num_pages:
     :return: list
     """
-    resume_ids = []
-
-    try:
-        page = download_resume_search_page(area_id, specialization_id, search_period, 0,
-                                           requests_interval, max_requests_number)
-        resume_ids.extend(parse_resume_hashes(page))
-        num_pages = parse_num_pages(page) if num_pages is None else min(num_pages, parse_num_pages(page))
-
-        for num_page in tqdm(range(1, num_pages), file=sys.stdout):
-            page = download_resume_search_page(area_id, specialization_id, search_period, num_page,
-                                               requests_interval, max_requests_number)
-            resume_ids.extend(parse_resume_hashes(page))
-
-    except HTTPError as http_error:
-        print(f"HTTP error occurred: {http_error}", file=sys.stderr)
-
-    return resume_ids
-
-
-def download_resume_ids(area_id, specialization_ids, search_period, num_pages,
-                        requests_interval=10, max_requests_number=100):
-    """
-    :param str area_id: area identifier from https://api.hh.ru/areas
-    :param list specialization_ids: specialization identifiers from https://api.hh.ru/specializations
-    :param int search_period: the number of days for search,
-                              available values: 0 - all period, 1 - day,
-                              3 - three days, 7 - week, 30 - month, 365 - year,
-                              all other values are equivalent 0
-    :param int num_pages: number of pages
-    :param int requests_interval: time interval between requests (sec.)
-    :param int max_requests_number: maximum number of requests
-    :return: list
-    """
-    resume_ids = []
-
-    for specialization_id in tqdm(specialization_ids, file=sys.stdout):
-        resume_ids.extend(download_specialization_resume_ids(area_id, specialization_id, search_period, num_pages,
-                                                             requests_interval, max_requests_number))
-
-    resume_ids = list(set(resume_ids))
-
-    return resume_ids
-
-
-def download_specialization_vacancy_ids(area_id, specialization_id, search_period, num_pages,
-                                        requests_interval=10, max_requests_number=100):
-    """
-    :param str area_id: area identifier from https://api.hh.ru/areas
-    :param str specialization_id: specialization identifiers from https://api.hh.ru/specializations
-    :param int search_period: the number of days for search, max value 30
-    :param int num_pages: page number, max value 19
-    :param int requests_interval: time interval between requests (sec.)
-    :param int max_requests_number: maximum number of requests
-    :return: list
-    """
-    vacancy_ids = []
-
     if num_pages is None:
         num_pages = 19
 
-    for num_page in tqdm(range(num_pages), file=sys.stdout):
-        page = download_vacancy_search_page(area_id, specialization_id, search_period, num_page,
-                                            requests_interval, max_requests_number)
-        vacancy_ids.extend([vacancy["id"] for vacancy in page["items"]])
+    ids = []
+    for specialization_id in tqdm(specialization_ids, file=sys.stdout):
+        for num_page in tqdm(range(num_pages), file=sys.stdout):
+            page = vacancy_search_page(area_id, specialization_id, search_period, num_page, **kwargs)
+            ids.extend([item["id"] for item in page["items"]])
 
-    return vacancy_ids
+    return list(set(ids))
 
-
-def download_vacancy_ids(area_id, specialization_ids, search_period, num_pages,
-                         requests_interval=10, max_requests_number=100):
+def download_resume_ids(area_id, specialization_ids, search_period, num_pages, **kwargs):
     """
-    :param str area_id: area identifier from https://api.hh.ru/areas
-    :param list specialization_ids: specialization identifiers from https://api.hh.ru/specializations
-    :param int search_period: the number of days for search, max value 30
-    :param int num_pages: page number, max value 19
-    :param int requests_interval: time interval between requests (sec.)
-    :param int max_requests_number: maximum number of requests
+    :param area_id:
+    :param specialization_ids:
+    :param search_period:
+    :param num_pages:
     :return: list
     """
-    vacancy_ids = []
-
+    ids = []
     for specialization_id in tqdm(specialization_ids, file=sys.stdout):
-        vacancy_ids.extend(download_specialization_vacancy_ids(area_id, specialization_id, search_period, num_pages,
-                                                               requests_interval, max_requests_number))
+        page = resume_search_page(area_id, specialization_id, search_period, 0, **kwargs)
+        ids.extend(parse_resume_hashes(page))
 
-    vacancy_ids = list(set(vacancy_ids))
+        num_pages = parse_num_pages(page) if num_pages is None else min(num_pages, parse_num_pages(page))
+        for num_page in tqdm(range(num_pages), file=sys.stdout):
+            page = resume_search_page(area_id, specialization_id, search_period, num_page, **kwargs)
+            ids.extend(parse_resume_hashes(page))
 
-    return vacancy_ids
-
+    return list(set(ids))
