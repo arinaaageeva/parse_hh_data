@@ -22,7 +22,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_pages", type=int, default=None)
     parser.add_argument("--requests_interval", type=int, default=10)
     parser.add_argument("--max_requests_number", type=int, default=100)
-    parser.add_argument("--break_reasons", nargs='+', default=['Forbidden'])
+    parser.add_argument("--break_reasons", nargs='+', default=["Forbidden", "Not Found"])
 
     args = parser.parse_args()
 
