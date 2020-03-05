@@ -6,7 +6,7 @@ import requests
 from tqdm import tqdm
 from functools import wraps
 from bs4 import BeautifulSoup
-from requests.exceptions import HTTPError, ConnectionError
+from requests.exceptions import HTTPError, ConnectionError, Timeout
 from random_user_agent.user_agent import UserAgent
 from random_user_agent.params import SoftwareName, OperatingSystem
 from parse_utils import parse_num_pages, parse_resume_hashes
@@ -24,7 +24,7 @@ VACANCY_PAGE_URL = "https://api.hh.ru/vacancies?area={}&specialization={}&period
 
 def download(get_url):
     @wraps(get_url)
-    def wrapper(*args, requests_interval=10, max_requests_number=100, break_reasons=None):
+    def wrapper(*args, timeout=10, requests_interval=10, max_requests_number=100, break_reasons=None):
         """
         :param int requests_interval: time interval between requests (sec.)
         :param int max_requests_number: maximum number of requests
@@ -35,10 +35,12 @@ def download(get_url):
 
         for _ in range(max_requests_number):
             try:
-                request = requests.get(url, headers={'User-Agent': USER_AGENT.get_random_user_agent()})
+                request = requests.get(url, headers={'User-Agent': USER_AGENT.get_random_user_agent()}, timeout=timeout)
                 request.raise_for_status()
             except ConnectionError as connection_error:
                 print(f"Connection error occurred: {connection_error}", file=sys.stderr)
+            except Timeout as time_out:
+                print(f"Timeout error occurred: {time_out}", file=sys.stderr)
             except HTTPError as http_error:
                 print(f"HTTP error occurred: {http_error}", file=sys.stderr)
                 if request.reason in break_reasons:
@@ -147,6 +149,7 @@ def download_vacancy_ids(area_id, specialization_ids, search_period, num_pages, 
             ids.extend([item["id"] for item in page["items"]])
 
     return list(set(ids))
+
 
 def download_resume_ids(area_id, specialization_ids, search_period, num_pages, **kwargs):
     """
