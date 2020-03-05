@@ -20,13 +20,15 @@ if __name__ == "__main__":
     parser.add_argument("--area_id", type=int, default=113)
     parser.add_argument("--search_period", type=int, default=1)
     parser.add_argument("--num_pages", type=int, default=None)
+    parser.add_argument("--timeout", type=int, default=10)
     parser.add_argument("--requests_interval", type=int, default=10)
     parser.add_argument("--max_requests_number", type=int, default=100)
     parser.add_argument("--break_reasons", nargs='+', default=["Forbidden", "Not Found"])
 
     args = parser.parse_args()
 
-    download_params = {"requests_interval": args.requests_interval,
+    download_params = {"timeout": args.timeout,
+                       "requests_interval": args.requests_interval,
                        "max_requests_number": args.max_requests_number,
                        "break_reasons": args.break_reasons}
 
