@@ -125,9 +125,9 @@ def parse_experiences(page):
             time_interval = time_interval.getText().replace("\xa0", " ")
 
             begin_time, end_time = time_interval.split(' — ')
-
-            position = experience_item.find("div",  {"class": "resume-block__sub-title", "data-qa": "resume-block-experience-position"}) \
-                                      .getText()
+            
+            position = experience_item.find("div",  {"class": "resume-block__sub-title", "data-qa": "resume-block-experience-position"})
+            position = "" if position is None else position.getText()
 
             description = experience_item.find("div", {"data-qa": "resume-block-experience-description"})
             description_child = description.findChild()
