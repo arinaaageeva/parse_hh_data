@@ -5,7 +5,7 @@ import argparse
 
 from tqdm import tqdm
 from bs4 import BeautifulSoup
-from parse_utils import parse_resume
+from utils.parse import parse_resume
 
 if __name__ == "__main__":
 

@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 from requests.exceptions import HTTPError, ConnectionError, Timeout
 from random_user_agent.user_agent import UserAgent
 from random_user_agent.params import SoftwareName, OperatingSystem
-from parse_utils import parse_num_pages, parse_resume_hashes
+from utils.parse import parse_num_pages, parse_resume_hashes
 
 SOFTWARE_NAMES = [SoftwareName.CHROME.value]
 OPERATING_SYSTEMS = [OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value]

@@ -6,7 +6,7 @@ import argparse
 from tqdm import tqdm
 from itertools import chain
 from requests.exceptions import HTTPError
-from download_utils import specializations, download_vacancy_ids, download_resume_ids, vacancy, resume
+from utils.download import specializations, download_vacancy_ids, download_resume_ids, vacancy, resume
 
 if __name__ == "__main__":
 
