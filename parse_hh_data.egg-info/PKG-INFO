@@ -1,0 +1,15 @@
+Metadata-Version: 2.1
+Name: parse-hh-data
+Version: 0.0.1
+Summary: Package for parsing data (vacancies and resumes) from site hh.ru
+Home-page: https://github.com/arinaaageeva/ParseHHData
+Author: Arina Ageeva
+Author-email: arina.a.ageeva@gmail.com
+License: UNKNOWN
+Description: # Parse HH Data Project
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PYTHON=python
-SRC_PATH=/home/arina/ParseHHData/src/python
+SRC_PATH=/home/arina/parse_hh_data/src/python
 DATA_PATH=/eee/data/hh-data
 
 current_date=$(date +'%Y-%m-%d')
