@@ -5,7 +5,7 @@
       <paths name="192.168.1.66">
         <serverdata>
           <mappings>
-            <mapping deploy="/ParseHHData" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/parse_hh_data" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
