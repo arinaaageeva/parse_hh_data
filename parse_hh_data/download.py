@@ -1,85 +1,172 @@
-import os
 import sys
+import time
 import json
-import argparse
+import requests
 
 from tqdm import tqdm
-from itertools import chain
-from requests.exceptions import HTTPError
-from utils.download import specializations, download_vacancy_ids, download_resume_ids, vacancy, resume
+from functools import wraps
+from bs4 import BeautifulSoup
+from requests.exceptions import HTTPError, ConnectionError, Timeout
+from random_user_agent.user_agent import UserAgent
+from random_user_agent.params import SoftwareName, OperatingSystem
+from parse import parse_num_pages, parse_resume_hashes
 
-if __name__ == "__main__":
+SOFTWARE_NAMES = [SoftwareName.CHROME.value]
+OPERATING_SYSTEMS = [OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value]
+USER_AGENT = UserAgent(software_names=SOFTWARE_NAMES, operating_systems=OPERATING_SYSTEMS, limit=100)
 
-    parser = argparse.ArgumentParser()
+RESUME_URL = "https://hh.ru/resume/{}"
+VACANCY_URL = "https://api.hh.ru/vacancies/{}"
+SPECIALIZATIONS_URL = "https://api.hh.ru/specializations"
+RESUME_PAGE_URL = "https://hh.ru/search/resume?area={}&specialization={}&search_period={}&page={}"
+VACANCY_PAGE_URL = "https://api.hh.ru/vacancies?area={}&specialization={}&period={}&page={}&per_page=100"
 
-    parser.add_argument("data", choices=["vacancies", "resumes"])
-    parser.add_argument("path")
-    parser.add_argument("directory")
-    parser.add_argument("path_specializations")
-    parser.add_argument("--update_specializations", action='store_true')
-    parser.add_argument("--area_id", type=int, default=113)
-    parser.add_argument("--search_period", type=int, default=1)
-    parser.add_argument("--num_pages", type=int, default=None)
-    parser.add_argument("--timeout", type=int, default=10)
-    parser.add_argument("--requests_interval", type=int, default=10)
-    parser.add_argument("--max_requests_number", type=int, default=100)
-    parser.add_argument("--break_reasons", nargs='+', default=["Forbidden", "Not Found"])
 
-    args = parser.parse_args()
+def download(get_url):
+    @wraps(get_url)
+    def wrapper(*args, timeout=10, requests_interval=10, max_requests_number=100, break_reasons=None):
+        """
+        :param int requests_interval: time interval between requests (sec.)
+        :param int max_requests_number: maximum number of requests
+        :param list break_reasons: list of reasons
+        """
+        url = get_url(*args)
+        break_reasons = set() if break_reasons is None else set(break_reasons)
 
-    download_params = {"timeout": args.timeout,
-                       "requests_interval": args.requests_interval,
-                       "max_requests_number": args.max_requests_number,
-                       "break_reasons": args.break_reasons}
+        for _ in range(max_requests_number):
+            try:
+                request = requests.get(url, headers={'User-Agent': USER_AGENT.get_random_user_agent()}, timeout=timeout)
+                request.raise_for_status()
+            except ConnectionError as connection_error:
+                print(f"Connection error occurred: {connection_error}", file=sys.stderr)
+            except Timeout as time_out:
+                print(f"Timeout error occurred: {time_out}", file=sys.stderr)
+            except HTTPError as http_error:
+                print(f"HTTP error occurred: {http_error}", file=sys.stderr)
+                if request.reason in break_reasons:
+                    break
+            else:
+                return request.content
 
-    # Download specializations
+            print(f"A second request to the {url} will be sent in {requests_interval} seconds")
+            time.sleep(requests_interval)
 
-    if args.update_specializations:
-        with open(args.path_specializations, "w") as fl:
-            json.dump(specializations(**download_params), fl)
+        raise HTTPError(f"Page on this {url} has not been downloaded")
+    return wrapper
 
-    try:
-        with open(os.path.join(args.path, "queue.json")) as fl:
-            queue = json.load(fl)["ids"]
 
-    except FileNotFoundError:
-        with open(args.path_specializations) as fl:
-            specializations = json.load(fl)
+def load_json(get_content):
+    @wraps(get_content)
+    def wrapper(*args, **kwargs):
+        return json.loads(get_content(*args, **kwargs))
+    return wrapper
 
-        specializations = [pofarea["specializations"] for pofarea in specializations]
-        specializations = [specialization["id"] for specialization in chain(*specializations)]
 
-        if args.data == "vacancies":
-            queue = download_vacancy_ids(args.area_id, specializations, args.search_period, args.num_pages, **download_params)
-        if args.data == "resumes":
-            queue = download_resume_ids(args.area_id, specializations, args.search_period, args.num_pages, **download_params)
+def parse_html(get_content):
+    @wraps(get_content)
+    def wrapper(*args, **kwargs):
+        return BeautifulSoup(get_content(*args, **kwargs), "html.parser")
+    return wrapper
 
-        with open(os.path.join(args.path, "queue.json"), "w") as fl:
-            json.dump({"ids": queue}, fl)
 
-    downloaded_ids = [files for _, _, files in os.walk(args.path)]
-    downloaded_ids = [file[:-5] for file in chain(*downloaded_ids)]
+@load_json
+@download
+def specializations():
+    """
+    :return: str
+    """
+    return SPECIALIZATIONS_URL
 
-    queue = set(queue) - set(downloaded_ids)
-    for item_id in tqdm(queue, file=sys.stdout):
-        try:
-            if args.data == "vacancies":
-                item = vacancy(item_id, **download_params)
-            if args.data == "resumes":
-                item = resume(item_id, **download_params)
 
-        except HTTPError as http_error:
-            print(f"HTTP error occurred: {http_error}", file=sys.stderr)
+@load_json
+@download
+def vacancy_search_page(area_id, specialization_id, search_period, num_page):
+    """
+    :param area_id: area identifier from https://api.hh.ru/areas
+    :param specialization_id: specialization identifier from https://api.hh.ru/specializations
+    :param int search_period: the number of days for search, max value 30
+    :param num_page: page number
+    :return: str
+    """
+    return VACANCY_PAGE_URL.format(area_id, specialization_id, search_period, num_page)
 
-        else:
-            if args.data == "vacancies":
-                item_id = f"{item_id}.json"
-                item = json.dumps(item)
-            if args.data == "resumes":
-                item_id = f"{item_id}.html"
-                item = str(item)
 
-            with open(os.path.join(args.path, args.directory, item_id), "w") as fl:
-                fl.write(item)
+@load_json
+@download
+def vacancy(identifier):
+    """
+    :param str identifier: vacancy identifier
+    :return: str
+    """
+    return VACANCY_URL.format(identifier)
 
-    os.remove(os.path.join(args.path, "queue.json"))
+
+@parse_html
+@download
+def resume_search_page(area_id, specialization_id, search_period, num_page):
+    """
+    :param str area_id: area identifier from https://api.hh.ru/areas
+    :param str specialization_id: specialization identifier from https://api.hh.ru/specializations
+    :param int search_period: the number of days for search,
+                              available values: 0 - all period, 1 - day,
+                              3 - three days, 7 - week, 30 - month, 365 - year,
+                              all other values are equivalent 0
+    :param int num_page: page number
+    :return: str
+    """
+    return RESUME_PAGE_URL.format(area_id, specialization_id, search_period, num_page)
+
+
+@parse_html
+@download
+def resume(identifier):
+    """
+    :param str identifier: resume identifier
+    :return: str
+    """
+    return RESUME_URL.format(identifier)
+
+
+def download_vacancy_ids(area_id, specialization_ids, search_period, num_pages, **kwargs):
+    """
+    :param area_id:
+    :param specialization_ids:
+    :param search_period:
+    :param num_pages:
+    :return: list
+    """
+    if num_pages is None:
+        num_pages = 19
+
+    ids = []
+    for specialization_id in tqdm(specialization_ids, file=sys.stdout):
+        for num_page in tqdm(range(num_pages), file=sys.stdout):
+            page = vacancy_search_page(area_id, specialization_id, search_period, num_page, **kwargs)
+
+            if not page["items"]:
+                break
+
+            ids.extend([item["id"] for item in page["items"]])
+
+    return list(set(ids))
+
+
+def download_resume_ids(area_id, specialization_ids, search_period, num_pages, **kwargs):
+    """
+    :param area_id:
+    :param specialization_ids:
+    :param search_period:
+    :param num_pages:
+    :return: list
+    """
+    ids = []
+    for specialization_id in tqdm(specialization_ids, file=sys.stdout):
+        page = resume_search_page(area_id, specialization_id, search_period, 0, **kwargs)
+        ids.extend(parse_resume_hashes(page))
+
+        num_pages = parse_num_pages(page) if num_pages is None else min(num_pages, parse_num_pages(page))
+        for num_page in tqdm(range(num_pages), file=sys.stdout):
+            page = resume_search_page(area_id, specialization_id, search_period, num_page, **kwargs)
+            ids.extend(parse_resume_hashes(page))
+
+    return list(set(ids))
