@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<module type="PYTHON_MODULE" version="4">
-  <component name="NewModuleRootManager">
-    <content url="file://$MODULE_DIR$/../parse_hh_data" />
-    <orderEntry type="jdk" jdkName="Remote Python 3.7.7 (sftp://arina@192.168.1.66:22/home/arina/anaconda3/envs/parse_hh_data/bin/python)" jdkType="Python SDK" />
-    <orderEntry type="sourceFolder" forTests="false" />
-  </component>
-</module>
