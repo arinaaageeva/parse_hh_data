@@ -1,3 +1,5 @@
+#! python
+
 import os
 import sys
 import json
@@ -5,7 +7,7 @@ import argparse
 
 from tqdm import tqdm
 from bs4 import BeautifulSoup
-from utils.parse import parse_resume
+from parse_hh_data.parse import parse_resume
 
 if __name__ == "__main__":
 

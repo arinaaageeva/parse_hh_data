@@ -1,15 +1,15 @@
-def parse_num_pages(page):
+
+def num_pages(page):
     """
     :param bs4.BeautifulSoup page: resumes search page
     :return: int
     """
-    num_pages = page.findAll("a", {"class": "bloko-button HH-Pager-Control"})
-    num_pages = int(num_pages[-1].getText()) if num_pages else 1
+    num = page.findAll("a", {"class": "bloko-button HH-Pager-Control"})
 
-    return num_pages
+    return int(num[-1].getText()) if num else 1
 
 
-def parse_resume_hashes(page):
+def resume_hashes(page):
     """
     :param bs4.BeautifulSoup page: resumes search page
     :return: list
@@ -24,7 +24,7 @@ def parse_resume_hashes(page):
     return hashes
 
 
-def parse_position(page):
+def position(page):
     """
     :param bs4.BeautifulSoup page: resume page
     :return: bs4.Tag
@@ -32,86 +32,90 @@ def parse_position(page):
     return page.find("div", {"class": "resume-block", "data-qa": "resume-block-position"})
 
 
-def parse_name(position):
+def position_name(position_block):
     """
-    :param bs4.Tag position: position block
+    :param bs4.Tag position_block: position block
     :return: str
     """
-    name = position.find("span", {"class": "resume-block__title-text",
-                                  "data-qa": "resume-block-title-position"})
-    name = name.getText()
+    name = position_block.find("span", {"class": "resume-block__title-text",
+                               "data-qa": "resume-block-title-position"})
 
-    return name
+    return name.getText()
 
 
-def parse_specializations(position, specializations):
+def position_specializations(position_block, specializations=None):
     """
-    :param bs4.Tag position: position block
-    :param dict specializations: specializations from https://api.hh.ru/specializations
+    :param bs4.Tag position_block: position block
+    :param dict specializations: specializations from https://api.hh.ru/specializations or None
     :return: list
     """
-    specializations = {profarea["name"]: (profarea["id"], profarea["specializations"]) for profarea in specializations}
+    position_block = position_block.find("div", {"class": "bloko-gap bloko-gap_bottom"})
 
-    position = position.find("div", {"class": "bloko-gap bloko-gap_bottom"})
-
-    profarea_name = position.find("span", {"data-qa": "resume-block-specialization-category"})
+    profarea_name = position_block.find("span", {"data-qa": "resume-block-specialization-category"})
     profarea_name = profarea_name.getText()
 
-    profarea_specializations = position.find("ul")
+    profarea_specializations = position_block.find("ul")
     profarea_specializations = profarea_specializations.findAll("li", {"class": "resume-block__specialization",
                                                                        "data-qa": "resume-block-position-specialization"})
+
     profarea_specializations = [item.getText() for item in profarea_specializations]
 
-    profarea_id, specializations = specializations[profarea_name]
+    if specializations is None:
+        profarea_specializations = [{"name": specialization_name, "profarea_name": profarea_name}
+                                    for specialization_name in profarea_specializations]
 
-    specializations = {item["name"]: item["id"] for item in specializations}
+    else:
+        specializations = {profarea["name"]: (profarea["id"], profarea["specializations"]) for profarea in specializations}
 
-    profarea_specializations = [{"id": specializations[specialization_name], "name": specialization_name,
-                                 "profarea_id": profarea_id, "profarea_name": profarea_name}
-                                for specialization_name in profarea_specializations]
+        profarea_id, specializations = specializations[profarea_name]
+        specializations = {item["name"]: item["id"] for item in specializations}
+
+        profarea_specializations = [{"id": specializations[specialization_name], "name": specialization_name,
+                                     "profarea_id": profarea_id, "profarea_name": profarea_name}
+                                    for specialization_name in profarea_specializations]
 
     return profarea_specializations
 
 
-def parse_description(page):
+def description(page):
     """
     :param bs4.BeautifulSoup page: resume page
     :return: str
     """
-    description = page.find("div", {"data-qa": "resume-block-skills-content"})
+    page_description = page.find("div", {"data-qa": "resume-block-skills-content"})
 
-    if description is None:
-        description = ""
+    if page_description is None:
+        page_description = ""
     else:
-        description_child = description.findChild()
-        description = description.getText() if description_child is None else str(description_child)
+        description_child = page_description.findChild()
+        page_description = page_description.getText() if description_child is None else str(description_child)
 
-    return description
+    return page_description
 
 
-def parse_key_skills(page):
+def key_skills(page):
     """
     :param bs4.BeautifulSoup page: resume page
     :return: list
     """
-    key_skills = page.find("div", {"data-qa": "skills-table", "class": "resume-block"})
+    page_key_skills = page.find("div", {"data-qa": "skills-table", "class": "resume-block"})
 
-    if key_skills is None:
-        key_skills = []
+    if page_key_skills is None:
+        page_key_skills = []
     else:
-        key_skills = key_skills.findAll("div", {"class": "bloko-tag bloko-tag_inline bloko-tag_countable",
-                                                "data-qa": "bloko-tag bloko-tag_inline"})
-        key_skills = [{"name": key_skill.getText()} for key_skill in key_skills]
+        page_key_skills = page_key_skills.findAll("div", {"class": "bloko-tag bloko-tag_inline bloko-tag_countable",
+                                                  "data-qa": "bloko-tag bloko-tag_inline"})
+        page_key_skills = [{"name": key_skill.getText()} for key_skill in page_key_skills]
 
-    return key_skills
+    return page_key_skills
 
 
-def parse_experiences(page):
+def experiences(page):
     """
     :param bs4.BeautifulSoup page: resume page
     :return: list
     """
-    experiences = []
+    page_experiences = []
     page = page.find("div", {"class": "resume-block", "data-qa": "resume-block-experience"})
 
     if page is not None:
@@ -126,38 +130,39 @@ def parse_experiences(page):
 
             begin_time, end_time = time_interval.split(' — ')
             
-            position = experience_item.find("div",  {"class": "resume-block__sub-title", "data-qa": "resume-block-experience-position"})
-            position = "" if position is None else position.getText()
+            item_position = experience_item.find("div",  {"class": "resume-block__sub-title", "data-qa": "resume-block-experience-position"})
+            item_position = "" if item_position is None else item_position.getText()
 
-            description = experience_item.find("div", {"data-qa": "resume-block-experience-description"})
-            description_child = description.findChild()
-            description = description.getText() if description_child is None else str(description_child)
+            item_description = experience_item.find("div", {"data-qa": "resume-block-experience-description"})
+            description_child = item_description.findChild()
+            item_description = item_description.getText() if description_child is None else str(description_child)
 
-            experiences.append(
+            page_experiences.append(
                 {"time": time,
                  "begin_time": begin_time,
                  "end_time": end_time,
-                 "position": position,
-                 "description": description}
+                 "position": item_position,
+                 "description": item_description}
             )
 
-    return experiences
+    return page_experiences
 
 
-def parse_resume(page, specializations):
+def resume(page, specializations=None):
     """
     :param bs4.BeautifulSoup page: resume page
-    :param dict specializations: specializations from https://api.hh.ru/specializations
+    :param dict specializations: specializations from https://api.hh.ru/specializations or None
     :return: dict
     """
     page = page.find("div", {"id": "HH-React-Root"})
-    position = parse_position(page)
+    resume_position = position(page)
 
-    resume = dict()
-    resume["name"] = parse_name(position)
-    resume["specializations"] = parse_specializations(position, specializations)
-    resume["description"] = parse_description(page)
-    resume["key_skills"] = parse_key_skills(page)
-    resume["experiences"] = parse_experiences(page)
+    return {
+        "name": position_name(resume_position),
+        "specializations": position_specializations(resume_position, specializations=specializations),
+        "description": description(page),
+        "key_skills": key_skills(page),
+        "experiences": experiences(page)
+    }
 
     return resume

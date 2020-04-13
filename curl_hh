@@ -1,3 +1,5 @@
+#! python
+
 import os
 import sys
 import json
@@ -6,7 +8,7 @@ import argparse
 from tqdm import tqdm
 from itertools import chain
 from requests.exceptions import HTTPError
-from utils.download import specializations, download_vacancy_ids, download_resume_ids, vacancy, resume
+from parse_hh_data.download import specializations, download_vacancy_ids, download_resume_ids, vacancy, resume
 
 if __name__ == "__main__":
 

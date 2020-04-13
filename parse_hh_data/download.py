@@ -10,7 +10,8 @@ from requests.exceptions import HTTPError, ConnectionError, Timeout
 from random_user_agent.user_agent import UserAgent
 from random_user_agent.params import SoftwareName, OperatingSystem
 
-from .parse import parse_num_pages, parse_resume_hashes
+from .parse import num_pages as parse_num_pages
+from .parse import resume_hashes as parse_resume_hashes
 
 SOFTWARE_NAMES = [SoftwareName.CHROME.value]
 OPERATING_SYSTEMS = [OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value]
@@ -130,10 +131,10 @@ def resume(identifier):
 
 def download_vacancy_ids(area_id, specialization_ids, search_period, num_pages, **kwargs):
     """
-    :param area_id:
-    :param specialization_ids:
-    :param search_period:
-    :param num_pages:
+    :param area_id: area identifier from https://api.hh.ru/areas
+    :param specialization_ids: specialization identifier from https://api.hh.ru/specializations
+    :param search_period: the number of days for search
+    :param num_pages: number pages for download
     :return: list
     """
     if num_pages is None:
@@ -154,10 +155,13 @@ def download_vacancy_ids(area_id, specialization_ids, search_period, num_pages, 
 
 def download_resume_ids(area_id, specialization_ids, search_period, num_pages, **kwargs):
     """
-    :param area_id:
-    :param specialization_ids:
-    :param search_period:
-    :param num_pages:
+    :param area_id: area identifier from https://api.hh.ru/areas
+    :param specialization_ids: specialization identifier from https://api.hh.ru/specializations
+    :param search_period: the number of days for search,
+                          available values: 0 - all period, 1 - day,
+                          3 - three days, 7 - week, 30 - month, 365 - year,
+                          all other values are equivalent 0
+    :param num_pages: number pages for download
     :return: list
     """
     ids = []
