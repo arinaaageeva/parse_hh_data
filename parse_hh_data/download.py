@@ -129,7 +129,7 @@ def resume(identifier):
     return RESUME_URL.format(identifier)
 
 
-def download_vacancy_ids(area_id, specialization_ids, search_period, num_pages, **kwargs):
+def vacancy_ids(area_id, specialization_ids, search_period, num_pages, **kwargs):
     """
     :param area_id: area identifier from https://api.hh.ru/areas
     :param specialization_ids: specialization identifier from https://api.hh.ru/specializations
@@ -153,7 +153,7 @@ def download_vacancy_ids(area_id, specialization_ids, search_period, num_pages, 
     return list(set(ids))
 
 
-def download_resume_ids(area_id, specialization_ids, search_period, num_pages, **kwargs):
+def resume_ids(area_id, specialization_ids, search_period, num_pages, **kwargs):
     """
     :param area_id: area identifier from https://api.hh.ru/areas
     :param specialization_ids: specialization identifier from https://api.hh.ru/specializations

@@ -7,7 +7,7 @@ import argparse
 
 from tqdm import tqdm
 from bs4 import BeautifulSoup
-from parse_hh_data.parse import parse_resume
+from parse_hh_data.parse import resume
 
 if __name__ == "__main__":
 
@@ -23,12 +23,17 @@ if __name__ == "__main__":
     with open(args.path_specializations) as fl:
         specializations = json.load(fl)
 
+    try:
+        os.mkdir(os.path.join(args.path_json, args.directory))
+    except FileExistsError:
+        pass
+
     for file in tqdm(os.listdir(os.path.join(args.path_html, args.directory)), file=sys.stdout):
         with open(os.path.join(args.path_html, args.directory, file)) as fl:
             page = BeautifulSoup(fl.read(), 'html.parser')
 
         try:
-            page = parse_resume(page, specializations)
+            page = resume(page, specializations)
             with open(os.path.join(args.path_json, args.directory, f"{file[:-5]}.json"), "w") as fl:
                 json.dump(page, fl)
 

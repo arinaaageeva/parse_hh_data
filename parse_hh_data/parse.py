@@ -19,7 +19,7 @@ def resume_hashes(page):
 
     if page is not None:
         hashes = page.findAll("div", {"data-qa": "resume-serp__resume"})
-        hashes = [item["data-hh-resume-hash"] for item in hashes]
+        hashes = [item.find("a")["href"][8:46] for item in hashes]
 
     return hashes
 
