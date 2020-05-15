@@ -1,3 +1,18 @@
+from datetime import datetime
+
+MONTHS = {"Январь": "January",
+          "Февраль": "February",
+          "Март": "March",
+          "Апрель": "April",
+          "Май": "May",
+          "Июнь": "June",
+          "Июль": "July",
+          "Август": "August",
+          "Сентябрь": "September",
+          "Октябрь": "October",
+          "Ноябрь": "November",
+          "Декабрь": "December"}
+
 
 def num_pages(page):
     """
@@ -110,9 +125,28 @@ def key_skills(page):
     return page_key_skills
 
 
-def experiences(page):
+def date(date, format="%d-%m-%Y"):
+    """
+    :param date str: date in format "Month (russian) Year"
+    :param format str: desired data format
+    :return: str
+    """
+    if date == "по настоящее время":
+        return None
+
+    month, year = date.split()
+    month = MONTHS[month]
+
+    date = f"{month} {year}"
+    date = datetime.strptime(date, "%B %Y").strftime(format)
+
+    return date
+
+
+def experiences(page, format="%d-%m-%Y"):
     """
     :param bs4.BeautifulSoup page: resume page
+    :param format str: desired data format
     :return: list
     """
     page_experiences = []
@@ -122,13 +156,9 @@ def experiences(page):
         page = page.find("div", {"class": "resume-block-item-gap"})
         for experience_item in page.findAll("div", {"class": "resume-block-item-gap"}):
             time_interval = experience_item.find("div", {"class": "bloko-column bloko-column_xs-4 bloko-column_s-2 bloko-column_m-2 bloko-column_l-2"})
-
-            time = time_interval.div.getText().replace("\xa0", " ")
-
             time_interval.div.extract()
-            time_interval = time_interval.getText().replace("\xa0", " ")
 
-            begin_time, end_time = time_interval.split(' — ')
+            start, end = time_interval.getText().replace("\xa0", " ").split(' — ')
             
             item_position = experience_item.find("div",  {"class": "resume-block__sub-title", "data-qa": "resume-block-experience-position"})
             item_position = "" if item_position is None else item_position.getText()
@@ -138,9 +168,8 @@ def experiences(page):
             item_description = item_description.getText() if description_child is None else str(description_child)
 
             page_experiences.append(
-                {"time": time,
-                 "begin_time": begin_time,
-                 "end_time": end_time,
+                {"start": date(start, format=format),
+                 "end": date(end, format=format),
                  "position": item_position,
                  "description": item_description}
             )
