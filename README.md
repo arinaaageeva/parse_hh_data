@@ -17,7 +17,11 @@ resume = parse.resume(resume)
 Обезличенные **резюме** скачиваются непосредственно с [сайта](https://hh.ru/search/resume) в html-формате, 
 а затем могут быть преобразованны в json-формат:
 
+    gender : str - пол соискателя
+    birthday : str - дата рождения
+    address : str - город проживания
     name : str - название резюме
+    salary : str or None - желаемая зарплата 
     description : str - дополнительная информация, описание навыков в свободной форме (может содержать html-код)
     key_skills : list - список ключевых навыков
             name : str - название ключевого навыка
@@ -34,6 +38,6 @@ resume = parse.resume(resume)
 
 ### Command line interface
 
-`download_data resumes ~/data/resumes 13-04-2020 specializations.json`
+`python download.py ~/resumes resume --area_ids 113 --specialization_ids 1 --search_period 30`
 
-`parse_resumes ~/data/resumes ~/data/resumes_json 13-04-2020 specializations.json`
+`parse_resumes ~/data/resumes ~/data/resumes_json`
