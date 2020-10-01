@@ -3,8 +3,6 @@ import os
 import sys
 import json
 import argparse
-import logconfig
-import logging.config
 
 from tqdm import tqdm
 from bs4 import BeautifulSoup
@@ -17,12 +15,8 @@ if __name__ == "__main__":
     parser.add_argument("path_html")
     parser.add_argument("path_json")
     parser.add_argument("--view_progress_bar", action='store_true')
-    parser.add_argument("--log", choices=["BASE", "DEBUG"], default="BASE")
 
     args = parser.parse_args()
-
-    config = logconfig.__dict__[args.log]
-    logging.config.dictConfig(config)
 
     resume_names = os.listdir(args.path_html)
     if args.view_progress_bar:
@@ -34,9 +28,5 @@ if __name__ == "__main__":
 
         resume_name = os.path.splitext(resume_name)[0]
 
-        logging.debug(f"{resume_name}: readed")
-
         with open(os.path.join(args.path_json, resume_name + ".json"), "w") as fl:
             json.dump(resume(page), fl)
-
-        logging.debug(f"{resume_name}: parsed and saved resume")

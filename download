@@ -3,8 +3,6 @@ import os
 import sys
 import json
 import argparse
-import logconfig
-import logging.config
 
 from tqdm import tqdm
 from parse_hh_data import download
@@ -30,9 +28,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    config = logconfig.__dict__[args.log]
-    logging.config.dictConfig(config)
-
     download_params = {"timeout": args.timeout,
                        "requests_interval": args.requests_interval,
                        "max_requests_number": args.max_requests_number,
@@ -53,8 +48,6 @@ if __name__ == "__main__":
             if args.data == "resume":
                 document_ids = download.resume_ids(area_id, specialization_id, args.search_period, args.num_pages, **download_params)
 
-            logging.debug(f"Downloaded {len(document_ids)} {args.data} ids: area {area_id}, specialization {specialization_id}")
-
             for document_id in document_ids:
                 try:
                     if args.data == "vacancy":
@@ -63,7 +56,7 @@ if __name__ == "__main__":
                         document = download.resume(document_id, **download_params)
 
                 except HTTPError as http_error:
-                    logging.error(f"HTTP error occurred: {http_error}")
+                    pass
 
                 else:
                     if args.data == "vacancy":
@@ -75,5 +68,3 @@ if __name__ == "__main__":
 
                     with open(os.path.join(args.path, document_id), "w") as fl:
                         fl.write(document)
-
-                    logging.debug(f"Downloaded {args.data} {document_id}")
