@@ -1,0 +1,78 @@
+import os
+import sys
+import json
+import argparse
+import logconfig
+import logging.config
+
+from tqdm import tqdm
+from parse_hh_data import download
+from requests.exceptions import HTTPError
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("path")
+    parser.add_argument("data", choices=["vacancy", "resume"])
+    parser.add_argument("--area_ids", nargs='+', default=[""])
+    parser.add_argument("--specialization_ids", nargs='+', default=[""])
+    parser.add_argument("--search_period", type=int, default=1)
+    parser.add_argument("--num_pages", type=int, default=None)
+    parser.add_argument("--timeout", type=int, default=10)
+    parser.add_argument("--requests_interval", type=int, default=10)
+    parser.add_argument("--max_requests_number", type=int, default=100)
+    parser.add_argument("--break_reasons", nargs='+', default=["Forbidden", "Not Found"])
+    parser.add_argument("--view_progress_area", action='store_true')
+    parser.add_argument("--view_progress_specialization", action='store_true')
+    parser.add_argument("--log", choices=["BASE", "DEBUG"], default="BASE")
+
+    args = parser.parse_args()
+
+    config = logconfig.__dict__[args.log]
+    logging.config.dictConfig(config)
+
+    download_params = {"timeout": args.timeout,
+                       "requests_interval": args.requests_interval,
+                       "max_requests_number": args.max_requests_number,
+                       "break_reasons": args.break_reasons}
+
+    area_ids = args.area_ids
+    if args.view_progress_area:
+        area_ids = tqdm(area_ids, file=sys.stdout)
+
+    specialization_ids = args.specialization_ids
+    if args.view_progress_specialization:
+        specialization_ids = tqdm(specialization_ids, file=sys.stdout)
+
+    for area_id in area_ids:
+        for specialization_id in specialization_ids:
+            if args.data == "vacancy":
+                document_ids = download.vacancy_ids(area_id, specialization_id, args.search_period, args.num_pages, **download_params)
+            if args.data == "resume":
+                document_ids = download.resume_ids(area_id, specialization_id, args.search_period, args.num_pages, **download_params)
+
+            logging.debug(f"Downloaded {len(document_ids)} {args.data} ids: area {area_id}, specialization {specialization_id}")
+
+            for document_id in document_ids:
+                try:
+                    if args.data == "vacancy":
+                        document = download.vacancy(document_id, **download_params)
+                    if args.data == "resume":
+                        document = download.resume(document_id, **download_params)
+
+                except HTTPError as http_error:
+                    logging.error(f"HTTP error occurred: {http_error}")
+
+                else:
+                    if args.data == "vacancy":
+                        document_id = f"{document_id}.json"
+                        document = json.dumps(document)
+                    if args.data == "resume":
+                        document_id = f"{document_id}.html"
+                        document = str(document)
+
+                    with open(os.path.join(args.path, document_id), "w") as fl:
+                        fl.write(document)
+
+                    logging.debug(f"Downloaded {args.data} {document_id}")

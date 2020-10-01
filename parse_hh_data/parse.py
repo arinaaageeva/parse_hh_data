@@ -19,9 +19,17 @@ def num_pages(page):
     :param bs4.BeautifulSoup page: resumes search page
     :return: int
     """
-    num = page.findAll("a", {"class": "bloko-button HH-Pager-Control"})
+    num = page.find("div", {"data-qa": "pager-block"})
 
-    return int(num[-1].getText()) if num else 1
+    if not num:
+        return 1
+
+    num = num.findAll("a", {"class": "bloko-button"})
+
+    if not num:
+        return 1
+
+    return int(num[-2].getText())
 
 
 def resume_hashes(page):
@@ -39,6 +47,53 @@ def resume_hashes(page):
     return hashes
 
 
+def header(page):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :return: bs4.Tag
+    """
+    return page.find("div", {"class": "resume-header-block"})
+
+
+def header_gender(header_page):
+    """
+    :param bs4.Tag position_block: position block
+    :return: str
+    """
+    gender = header_page.find("span", {"data-qa": "resume-personal-gender"})
+
+    if gender is not None:
+        gender = gender.getText()
+
+    return gender
+
+
+def header_birthday(header_page):
+    """
+    :param bs4.Tag position_block: position block
+    :return: str
+    """
+    birthday = header_page.find("span", {"data-qa": "resume-personal-birthday"})
+
+    if birthday is not None:
+        birthday = birthday.getText()
+
+    return birthday
+
+
+def header_address(header_page):
+    """
+    :param bs4.Tag position_block: position block
+    :return: str
+    """
+    address = header_page.find("span", {"data-qa": "resume-personal-address"})
+
+    if address is not None:
+        address = address.getText()
+
+    return address
+
+
 def position(page):
     """
     :param bs4.BeautifulSoup page: resume page
@@ -53,15 +108,28 @@ def position_name(position_block):
     :return: str
     """
     name = position_block.find("span", {"class": "resume-block__title-text",
-                               "data-qa": "resume-block-title-position"})
+                                        "data-qa": "resume-block-title-position"})
 
     return name.getText()
 
 
-def position_specializations(position_block, specializations=None):
+def position_salary(position_block):
     """
     :param bs4.Tag position_block: position block
-    :param dict specializations: specializations from https://api.hh.ru/specializations or None
+    :return: str
+    """
+    salary = position_block.find("span", {"class": "resume-block__salary resume-block__title-text_salary",
+                                          "data-qa": "resume-block-salary"})
+
+    if salary is not None:
+        salary = salary.getText()
+
+    return salary
+
+
+def position_specializations(position_block):
+    """
+    :param bs4.Tag position_block: position block
     :return: list
     """
     position_block = position_block.find("div", {"class": "bloko-gap bloko-gap_bottom"})
@@ -74,20 +142,8 @@ def position_specializations(position_block, specializations=None):
                                                                        "data-qa": "resume-block-position-specialization"})
 
     profarea_specializations = [item.getText() for item in profarea_specializations]
-
-    if specializations is None:
-        profarea_specializations = [{"name": specialization_name, "profarea_name": profarea_name}
-                                    for specialization_name in profarea_specializations]
-
-    else:
-        specializations = {profarea["name"]: (profarea["id"], profarea["specializations"]) for profarea in specializations}
-
-        profarea_id, specializations = specializations[profarea_name]
-        specializations = {item["name"]: item["id"] for item in specializations}
-
-        profarea_specializations = [{"id": specializations[specialization_name], "name": specialization_name,
-                                     "profarea_id": profarea_id, "profarea_name": profarea_name}
-                                    for specialization_name in profarea_specializations]
+    profarea_specializations = [{"name": specialization_name, "profarea_name": profarea_name}
+                                for specialization_name in profarea_specializations]
 
     return profarea_specializations
 
@@ -131,11 +187,13 @@ def date(date, format="%d-%m-%Y"):
     :param format str: desired data format
     :return: str
     """
-    if date == "по настоящее время":
+    if date in ["по настоящее время", "currently"]:
         return None
 
     month, year = date.split()
-    month = MONTHS[month]
+
+    if month in MONTHS:
+        month = MONTHS[month]
 
     date = f"{month} {year}"
     date = datetime.strptime(date, "%B %Y").strftime(format)
@@ -177,18 +235,22 @@ def experiences(page, format="%d-%m-%Y"):
     return page_experiences
 
 
-def resume(page, specializations=None):
+def resume(page):
     """
     :param bs4.BeautifulSoup page: resume page
-    :param dict specializations: specializations from https://api.hh.ru/specializations or None
     :return: dict
     """
     page = page.find("div", {"id": "HH-React-Root"})
+    resume_header = header(page)
     resume_position = position(page)
 
     return {
+        "gender": header_gender(resume_header),
+        "birthday": header_birthday(resume_header),
+        "address": header_address(resume_header),
         "name": position_name(resume_position),
-        "specializations": position_specializations(resume_position, specializations=specializations),
+        "salary": position_salary(resume_position),
+        "specializations":  position_specializations(resume_position),
         "description": description(page),
         "key_skills": key_skills(page),
         "experiences": experiences(page)

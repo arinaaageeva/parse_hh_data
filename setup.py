@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="parse-hh-data",
-    version="0.1.6",
+    version="0.1.7",
     author="Arina Ageeva",
     author_email="arina.a.ageeva@gmail.com",
     description="Package for parsing data (vacancies and resumes) from site hh.ru",
@@ -23,6 +23,6 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    scripts=["download_data", "parse_resumes"],
+    scripts=["download", "parse"],
     python_requires='>=3.6',
 )

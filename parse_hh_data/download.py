@@ -19,6 +19,7 @@ USER_AGENT = UserAgent(software_names=SOFTWARE_NAMES, operating_systems=OPERATIN
 
 RESUME_URL = "https://hh.ru/resume/{}"
 VACANCY_URL = "https://api.hh.ru/vacancies/{}"
+AREAS_URL = "https://api.hh.ru/areas"
 SPECIALIZATIONS_URL = "https://api.hh.ru/specializations"
 RESUME_PAGE_URL = "https://hh.ru/search/resume?area={}&specialization={}&search_period={}&page={}"
 VACANCY_PAGE_URL = "https://api.hh.ru/vacancies?area={}&specialization={}&period={}&page={}&per_page=100"
@@ -69,6 +70,15 @@ def parse_html(get_content):
     def wrapper(*args, **kwargs):
         return BeautifulSoup(get_content(*args, **kwargs), "html.parser")
     return wrapper
+
+
+@load_json
+@download
+def areas():
+    """
+    :return: str
+    """
+    return AREAS_URL
 
 
 @load_json
@@ -129,10 +139,10 @@ def resume(identifier):
     return RESUME_URL.format(identifier)
 
 
-def vacancy_ids(area_id, specialization_ids, search_period, num_pages, **kwargs):
+def vacancy_ids(area_id, specialization_id, search_period, num_pages, **kwargs):
     """
     :param area_id: area identifier from https://api.hh.ru/areas
-    :param specialization_ids: specialization identifier from https://api.hh.ru/specializations
+    :param specialization_id: specialization identifier from https://api.hh.ru/specializations
     :param search_period: the number of days for search
     :param num_pages: number pages for download
     :return: list
@@ -141,22 +151,21 @@ def vacancy_ids(area_id, specialization_ids, search_period, num_pages, **kwargs)
         num_pages = 19
 
     ids = []
-    for specialization_id in tqdm(specialization_ids, file=sys.stdout):
-        for num_page in tqdm(range(num_pages), file=sys.stdout):
-            page = vacancy_search_page(area_id, specialization_id, search_period, num_page, **kwargs)
+    for num_page in range(num_pages):
+        page = vacancy_search_page(area_id, specialization_id, search_period, num_page, **kwargs)
 
-            if not page["items"]:
-                break
+        if not page["items"]:
+            break
 
-            ids.extend([item["id"] for item in page["items"]])
+        ids.extend([item["id"] for item in page["items"]])
 
     return list(set(ids))
 
 
-def resume_ids(area_id, specialization_ids, search_period, num_pages, **kwargs):
+def resume_ids(area_id, specialization_id, search_period, num_pages, **kwargs):
     """
     :param area_id: area identifier from https://api.hh.ru/areas
-    :param specialization_ids: specialization identifier from https://api.hh.ru/specializations
+    :param specialization_id: specialization identifier from https://api.hh.ru/specializations
     :param search_period: the number of days for search,
                           available values: 0 - all period, 1 - day,
                           3 - three days, 7 - week, 30 - month, 365 - year,
@@ -164,14 +173,13 @@ def resume_ids(area_id, specialization_ids, search_period, num_pages, **kwargs):
     :param num_pages: number pages for download
     :return: list
     """
-    ids = []
-    for specialization_id in tqdm(specialization_ids, file=sys.stdout):
-        page = resume_search_page(area_id, specialization_id, search_period, 0, **kwargs)
-        ids.extend(parse_resume_hashes(page))
+    page = resume_search_page(area_id, specialization_id, search_period, 0, **kwargs)
+    ids = parse_resume_hashes(page)
 
-        num_pages = parse_num_pages(page) if num_pages is None else min(num_pages, parse_num_pages(page))
-        for num_page in tqdm(range(num_pages), file=sys.stdout):
-            page = resume_search_page(area_id, specialization_id, search_period, num_page, **kwargs)
-            ids.extend(parse_resume_hashes(page))
+    num_pages = parse_num_pages(page) if num_pages is None else min(num_pages, parse_num_pages(page))
+
+    for num_page in range(num_pages):
+        page = resume_search_page(area_id, specialization_id, search_period, num_page, **kwargs)
+        ids.extend(parse_resume_hashes(page))
 
     return list(set(ids))
