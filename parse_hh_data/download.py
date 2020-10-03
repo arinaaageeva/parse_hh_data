@@ -3,7 +3,6 @@ import time
 import json
 import requests
 
-from tqdm import tqdm
 from functools import wraps
 from bs4 import BeautifulSoup
 from requests.exceptions import HTTPError, ConnectionError, Timeout
