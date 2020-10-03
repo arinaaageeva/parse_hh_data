@@ -55,6 +55,19 @@ def header(page):
     return page.find("div", {"class": "resume-header-block"})
 
 
+def header_birth_date(header_page):
+    """
+    :param bs4.Tag position_block: position block
+    :return: str
+    """
+    birth_date = header_page.find("span", {"data-qa": "resume-personal-birthday"})
+
+    if birth_date is not None:
+        birth_date = birth_date.getText()
+
+    return birth_date
+
+
 def header_gender(header_page):
     """
     :param bs4.Tag position_block: position block
@@ -68,30 +81,17 @@ def header_gender(header_page):
     return gender
 
 
-def header_birthday(header_page):
+def header_area(header_page):
     """
     :param bs4.Tag position_block: position block
     :return: str
     """
-    birthday = header_page.find("span", {"data-qa": "resume-personal-birthday"})
+    area = header_page.find("span", {"data-qa": "resume-personal-address"})
 
-    if birthday is not None:
-        birthday = birthday.getText()
+    if area is not None:
+        area = area.getText()
 
-    return birthday
-
-
-def header_address(header_page):
-    """
-    :param bs4.Tag position_block: position block
-    :return: str
-    """
-    address = header_page.find("span", {"data-qa": "resume-personal-address"})
-
-    if address is not None:
-        address = address.getText()
-
-    return address
+    return area
 
 
 def position(page):
@@ -102,29 +102,15 @@ def position(page):
     return page.find("div", {"class": "resume-block", "data-qa": "resume-block-position"})
 
 
-def position_name(position_block):
+def position_title(position_block):
     """
     :param bs4.Tag position_block: position block
     :return: str
     """
-    name = position_block.find("span", {"class": "resume-block__title-text",
-                                        "data-qa": "resume-block-title-position"})
+    title = position_block.find("span", {"class": "resume-block__title-text",
+                                         "data-qa": "resume-block-title-position"})
 
-    return name.getText()
-
-
-def position_salary(position_block):
-    """
-    :param bs4.Tag position_block: position block
-    :return: str
-    """
-    salary = position_block.find("span", {"class": "resume-block__salary resume-block__title-text_salary",
-                                          "data-qa": "resume-block-salary"})
-
-    if salary is not None:
-        salary = salary.getText()
-
-    return salary
+    return title.getText()
 
 
 def position_specializations(position_block):
@@ -148,37 +134,98 @@ def position_specializations(position_block):
     return profarea_specializations
 
 
-def description(page):
+def position_salary(position_block):
+    """
+    :param bs4.Tag position_block: position block
+    :return: dict
+    """
+    salary = position_block.find("span", {"class": "resume-block__salary resume-block__title-text_salary",
+                                          "data-qa": "resume-block-salary"})
+    amount = None
+    currency = None
+    if salary is not None:
+        salary = salary.getText() \
+                       .replace('\u2009', '') \
+                       .split('\xa0')
+
+        amount = int(salary[0])
+        currency = ' '.join(salary[1:])
+
+    salary = {"amount": amount,
+              "currency": currency}
+
+    return salary
+
+
+def education(page):
     """
     :param bs4.BeautifulSoup page: resume page
+    :return: bs4.Tag
+    """
+    return page.find("div", {"class": "resume-block", "data-qa": "resume-block-education"})
+
+
+def education_level(education_block):
+    """
+    :param bs4.Tag education_block: education block
     :return: str
     """
-    page_description = page.find("div", {"data-qa": "resume-block-skills-content"})
+    if education_block is not None:
+        return education_block.find("span", {"class": "resume-block__title-text resume-block__title-text_sub"}) \
+                              .getText()
 
-    if page_description is None:
-        page_description = ""
-    else:
-        description_child = page_description.findChild()
-        page_description = page_description.getText() if description_child is None else str(description_child)
-
-    return page_description
+    return "Образования нет"
 
 
-def key_skills(page):
+def educations(education_block):
+    """
+    :param bs4.Tag education_block: education block
+    :return: list
+    """
+    page_educations = []
+    if education_block is not None:
+        education_block = education_block.find("div", {"class": "resume-block-item-gap"}) \
+                                         .find("div", {"class": "bloko-columns-row"})
+
+        for education_item in education_block.findAll("div", {"class": "resume-block-item-gap"}):
+            year = education_item.find("div", {"class": "bloko-column bloko-column_xs-4 bloko-column_s-2 bloko-column_m-2 bloko-column_l-2"}) \
+                                 .getText()
+
+            item_name = education_item.find("div", {"data-qa": "resume-block-education-name"}) \
+                                      .getText()
+
+            item_organization = education_item.find("div", {"data-qa": "resume-block-education-organization"})
+            if item_organization is not None:
+                item_organization = item_organization.getText()
+
+            page_educations.append(
+                {"year": year,
+                 "name": item_name,
+                 "organization": item_organization}
+            )
+
+    return page_educations
+
+
+def languages(page):
     """
     :param bs4.BeautifulSoup page: resume page
     :return: list
     """
-    page_key_skills = page.find("div", {"data-qa": "skills-table", "class": "resume-block"})
+    page_languages = []
+    page = page.find("div", {"class": "resume-block", "data-qa": "resume-block-languages"})
 
-    if page_key_skills is None:
-        page_key_skills = []
-    else:
-        page_key_skills = page_key_skills.findAll("div", {"class": "bloko-tag bloko-tag_inline bloko-tag_countable",
-                                                  "data-qa": "bloko-tag bloko-tag_inline"})
-        page_key_skills = [{"name": key_skill.getText()} for key_skill in page_key_skills]
+    if page is not None:
+        for language in page.findAll("p", {"data-qa": "resume-block-language-item"}):
+            language = language.getText().split(" — ")
 
-    return page_key_skills
+            level = ' - '.join(language[1:])
+            language = language[0]
+
+            page_languages.append({"name": language,
+                                   "level": level})
+
+    return page_languages
 
 
 def date(date, format="%d-%m-%Y"):
@@ -235,53 +282,35 @@ def experiences(page, format="%d-%m-%Y"):
     return page_experiences
 
 
-def education(page):
+def skill_set(page):
     """
     :param bs4.BeautifulSoup page: resume page
-    :return: bs4.Tag
-    """
-    return page.find("div", {"class": "resume-block", "data-qa": "resume-block-education"})
-
-
-def education_type(education_block):
-    """
-    :param bs4.Tag education_block: education block
-    :return: str
-    """
-    if education_block is not None:
-        return education_block.find("span", {"class": "resume-block__title-text resume-block__title-text_sub"}) \
-                              .getText()
-
-    return "Образования нет"
-
-
-def education_items(education_block):
-    """
-    :param bs4.Tag education_block: education block
     :return: list
     """
-    page_educations = []
-    if education_block is not None:
-        education_block = education_block.find("div", {"class": "resume-block-item-gap"}) \
-                                         .find("div", {"class": "bloko-columns-row"})
+    page = page.find("div", {"data-qa": "skills-table", "class": "resume-block"})
 
-        for education_item in education_block.findAll("div", {"class": "resume-block-item-gap"}):
-            end = education_item.find("div", {"class": "bloko-column bloko-column_xs-4 bloko-column_s-2 bloko-column_m-2 bloko-column_l-2"}) \
-                                .getText()
+    page_skill_set = []
+    if page is not None:
+        page_skill_set = page.findAll("div", {"class": "bloko-tag bloko-tag_inline bloko-tag_countable",
+                                              "data-qa": "bloko-tag bloko-tag_inline"})
+        page_skill_set = [skill.getText() for skill in page_skill_set]
 
-            item_name = education_item.find("div", {"data-qa": "resume-block-education-name"}) \
-                                      .getText()
+    return page_skill_set
 
-            item_organization = education_item.find("div", {"data-qa": "resume-block-education-organization"}) \
-                                              .getText()
 
-            page_educations.append(
-                {"end": end,
-                 "name": item_name,
-                 "organization": item_organization}
-            )
+def skills(page):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :return: str
+    """
+    page = page.find("div", {"data-qa": "resume-block-skills-content"})
 
-    return page_educations
+    page_skills = ""
+    if page is not None:
+        skills_child = page.findChild()
+        page_skills = page.getText() if skills_child is None else str(skills_child)
+
+    return page_skills
 
 
 def resume(page):
@@ -290,22 +319,24 @@ def resume(page):
     :return: dict
     """
     page = page.find("div", {"id": "HH-React-Root"})
+
     resume_header = header(page)
     resume_position = position(page)
     resume_education = education(page)
 
     return {
+        "birth_date": header_birth_date(resume_header),
         "gender": header_gender(resume_header),
-        "birthday": header_birthday(resume_header),
-        "address": header_address(resume_header),
-        "name": position_name(resume_position),
+        "area": header_area(resume_header),
+        "title": position_title(resume_position),
+        "specialization": position_specializations(resume_position),
         "salary": position_salary(resume_position),
-        "specializations":  position_specializations(resume_position),
-        "description": description(page),
-        "key_skills": key_skills(page),
-        "experiences": experiences(page),
-        "education_type": education_type(resume_education),
-        "educations": education_items(resume_education)
+        "education_level": education_level(resume_education),
+        "education": educations(resume_education),
+        "language": languages(page),
+        "experience": experiences(page),
+        "skill_set": skill_set(page),
+        "skills": skills(page)
     }
 
     return resume
