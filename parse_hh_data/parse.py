@@ -235,6 +235,55 @@ def experiences(page, format="%d-%m-%Y"):
     return page_experiences
 
 
+def education(page):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :return: bs4.Tag
+    """
+    return page.find("div", {"class": "resume-block", "data-qa": "resume-block-education"})
+
+
+def education_type(education_block):
+    """
+    :param bs4.Tag education_block: education block
+    :return: str
+    """
+    if education_block is not None:
+        return education_block.find("span", {"class": "resume-block__title-text resume-block__title-text_sub"}) \
+                              .getText()
+
+    return "Образования нет"
+
+
+def education_items(education_block):
+    """
+    :param bs4.Tag education_block: education block
+    :return: list
+    """
+    page_educations = []
+    if education_block is not None:
+        education_block = education_block.find("div", {"class": "resume-block-item-gap"}) \
+                                         .find("div", {"class": "bloko-columns-row"})
+
+        for education_item in education_block.findAll("div", {"class": "resume-block-item-gap"}):
+            end = education_item.find("div", {"class": "bloko-column bloko-column_xs-4 bloko-column_s-2 bloko-column_m-2 bloko-column_l-2"}) \
+                                .getText()
+
+            item_name = education_item.find("div", {"data-qa": "resume-block-education-name"}) \
+                                      .getText()
+
+            item_organization = education_item.find("div", {"data-qa": "resume-block-education-organization"}) \
+                                              .getText()
+
+            page_educations.append(
+                {"end": end,
+                 "name": item_name,
+                 "organization": item_organization}
+            )
+
+    return page_educations
+
+
 def resume(page):
     """
     :param bs4.BeautifulSoup page: resume page
@@ -243,6 +292,7 @@ def resume(page):
     page = page.find("div", {"id": "HH-React-Root"})
     resume_header = header(page)
     resume_position = position(page)
+    resume_education = education(page)
 
     return {
         "gender": header_gender(resume_header),
@@ -253,7 +303,9 @@ def resume(page):
         "specializations":  position_specializations(resume_position),
         "description": description(page),
         "key_skills": key_skills(page),
-        "experiences": experiences(page)
+        "experiences": experiences(page),
+        "education_type": education_type(resume_education),
+        "educations": education_items(resume_education)
     }
 
     return resume
