@@ -1,3 +1,4 @@
+from functools import wraps
 from datetime import datetime
 
 MONTHS = {"Январь": "January",
@@ -55,43 +56,49 @@ def header(page):
     return page.find("div", {"class": "resume-header-block"})
 
 
-def header_birth_date(header_page):
+def get_header_text(find_header_element):
+    @wraps(find_header_element)
+    def wrapper(header_block):
+        """
+        :param bs4.Tag header_block: header block
+        :return: str or None
+        """
+        text = None
+        if header_block is not None:
+            header_block = find_header_element(header_block)
+
+            if header_block is not None:
+                text = header_block.getText()
+
+        return text
+    return wrapper
+
+
+@get_header_text
+def header_birth_date(header_block):
     """
-    :param bs4.Tag position_block: position block
+    :param bs4.Tag header_block: header block
+    :return: str or None
+    """
+    return header_block.find("span", {"data-qa": "resume-personal-birthday"})
+
+
+@get_header_text
+def header_gender(header_block):
+    """
+    :param bs4.Tag header_block: header block
+    :return: str or None
+    """
+    return header_block.find("span", {"data-qa": "resume-personal-gender"})
+
+
+@get_header_text
+def header_area(header_block):
+    """
+    :param bs4.Tag header_block: header block
     :return: str
     """
-    birth_date = header_page.find("span", {"data-qa": "resume-personal-birthday"})
-
-    if birth_date is not None:
-        birth_date = birth_date.getText()
-
-    return birth_date
-
-
-def header_gender(header_page):
-    """
-    :param bs4.Tag position_block: position block
-    :return: str
-    """
-    gender = header_page.find("span", {"data-qa": "resume-personal-gender"})
-
-    if gender is not None:
-        gender = gender.getText()
-
-    return gender
-
-
-def header_area(header_page):
-    """
-    :param bs4.Tag position_block: position block
-    :return: str
-    """
-    area = header_page.find("span", {"data-qa": "resume-personal-address"})
-
-    if area is not None:
-        area = area.getText()
-
-    return area
+    return header_block.find("span", {"data-qa": "resume-personal-address"})
 
 
 def position(page):
@@ -321,6 +328,7 @@ def resume(page):
     page = page.find("div", {"id": "HH-React-Root"})
 
     resume_header = header(page)
+
     resume_position = position(page)
     resume_education = education(page)
 
