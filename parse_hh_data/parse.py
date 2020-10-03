@@ -199,7 +199,7 @@ def educations(education_block):
                 item_organization = item_organization.getText()
 
             page_educations.append(
-                {"year": year,
+                {"year": int(year),
                  "name": item_name,
                  "organization": item_organization}
             )
