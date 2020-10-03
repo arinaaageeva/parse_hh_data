@@ -16,21 +16,33 @@ resume = parse.resume(resume)
 
 Обезличенные **резюме** скачиваются непосредственно с [сайта](https://hh.ru/search/resume) в html-формате, 
 а затем могут быть преобразованны в json-формат:
-
-    gender : str - пол соискателя
-    birthday : str - дата рождения
-    address : str - город проживания
-    name : str - название резюме
-    salary : str or None - желаемая зарплата 
-    description : str - дополнительная информация, описание навыков в свободной форме (может содержать html-код)
-    key_skills : list - список ключевых навыков
-            name : str - название ключевого навыка
-    experiences : list - опыт работы
-            start : str - начало работы (дата в формате dd-MM-yyyy)
-            end : str - окончание работы (дата в формате dd-MM-yyyy)
-            position : str - должность
-            description : str - обязанности, функции, достижения (может содержать html-код)
-
+    
+    birth_date : str - день рождения
+    gender : str - пол
+    area : str - город проживания
+    title : str - желаемая должность
+    specialization : list - специализации соискателя
+        name : str - название специализации
+        profarea_name : str - название профессиональной области, в которую входит специализация
+    salary : dict - желаемая зарплата
+        amount : int - сумма
+        currency : str - валюта
+    education_level : str - уровень образования
+    education : list - образование
+        year : int - год окончания
+        name : str - название учебного заведения
+        organization : str - организация, специальность / специализация
+    language : list - список языков, которыми владеет соискатель
+        name : str - название языка
+        level : str - уровень знания языка
+    experience : list - опыт работы
+        start : str - начало работы (дата в формате dd-MM-yyyy)
+        end : str - окончание работы (дата в формате dd-MM-yyyy)
+        position : str - должность
+        description : str - обязанности, функции, достижения (может содержать html-код)
+    skills : str - дополнительная информация, описание навыков в свободной форме (может содержать html-код)
+    skill_set : list - ключевые навыки
+            
 с помощью `parse_hh_data.parse.resume`.
 
 Скачать списки идентификаторов вакансий или резюме можно используя 
@@ -38,6 +50,6 @@ resume = parse.resume(resume)
 
 ### Command line interface
 
-`python download.py ~/resumes resume --area_ids 113 --specialization_ids 1 --search_period 30`
+`download ~/resumes resume --area_ids 113 --specialization_ids 1 --search_period 30`
 
-`parse_resumes ~/data/resumes ~/data/resumes_json`
+`parse ~/data/resumes ~/data/resumes_json`
