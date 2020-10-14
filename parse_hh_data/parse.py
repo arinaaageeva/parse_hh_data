@@ -56,49 +56,43 @@ def header(page):
     return page.find("div", {"class": "resume-header-block"})
 
 
-def get_header_text(find_header_element):
-    @wraps(find_header_element)
-    def wrapper(header_block):
+def get_optional_text(find_optional_element):
+    @wraps(find_optional_element)
+    def wrapper(page):
         """
-        :param bs4.Tag header_block: header block
+        :param bs4.Tag element: element from resume
         :return: str or None
         """
-        text = None
-        if header_block is not None:
-            header_block = find_header_element(header_block)
-
-            if header_block is not None:
-                text = header_block.getText()
-
-        return text
+        optional_element = find_optional_element(page)
+        return None if optional_element is None else optional_element.getText()
     return wrapper
 
 
-@get_header_text
-def header_birth_date(header_block):
+@get_optional_text
+def birth_date(page):
     """
-    :param bs4.Tag header_block: header block
+    :param bs4.BeautifulSoup page: resume page
     :return: str or None
     """
-    return header_block.find("span", {"data-qa": "resume-personal-birthday"})
+    return page.find("span", {"data-qa": "resume-personal-birthday"})
 
 
-@get_header_text
-def header_gender(header_block):
+@get_optional_text
+def gender(page):
     """
-    :param bs4.Tag header_block: header block
+    :param bs4.BeautifulSoup page: resume page
     :return: str or None
     """
-    return header_block.find("span", {"data-qa": "resume-personal-gender"})
+    return page.find("span", {"data-qa": "resume-personal-gender"})
 
 
-@get_header_text
-def header_area(header_block):
+@get_optional_text
+def area(page):
     """
-    :param bs4.Tag header_block: header block
-    :return: str
+    :param bs4.BeautifulSoup page: resume page
+    :return: str or None
     """
-    return header_block.find("span", {"data-qa": "resume-personal-address"})
+    return page.find("span", {"data-qa": "resume-personal-address"})
 
 
 def position(page):
@@ -327,15 +321,13 @@ def resume(page):
     """
     page = page.find("div", {"id": "HH-React-Root"})
 
-    resume_header = header(page)
-
     resume_position = position(page)
     resume_education = education(page)
 
     return {
-        "birth_date": header_birth_date(resume_header),
-        "gender": header_gender(resume_header),
-        "area": header_area(resume_header),
+        "birth_date": birth_date(page),
+        "gender": gender(page),
+        "area": area(page),
         "title": position_title(resume_position),
         "specialization": position_specializations(resume_position),
         "salary": position_salary(resume_position),
