@@ -145,10 +145,7 @@ def position_salary(position_block):
     amount = None
     currency = None
     if salary is not None:
-        salary = salary.getText() \
-                       .replace('\u2009', '') \
-                       .split('\xa0')
-
+        salary = salary.getText().replace('\u2009', '').replace('\xa0', ' ').strip().split()
         amount = int(salary[0])
         currency = ' '.join(salary[1:])
 
