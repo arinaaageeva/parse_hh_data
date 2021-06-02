@@ -17,7 +17,7 @@ setuptools.setup(
                       "random-user-agent==1.0.1",
                       "requests==2.23.0",
                       "tqdm==4.44.1",
-                      "urllib3==1.25.8"],
+                      "urllib3==1.26.5"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
