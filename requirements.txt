@@ -1,4 +1,12 @@
 beautifulsoup4==4.8.2
+certifi==2021.10.8
+chardet==3.0.4
+idna==2.10
+-e git+https://github.com/a-fenk/parse_hh_data.git@e5e2f5f46f218d4baecc76dac2521deb1a5f0e16#egg=parse_hh_data
+PySocks==1.7.1
 random-user-agent==1.0.1
 requests==2.23.0
+soupsieve==2.3.1
+stem==1.8.0
 tqdm==4.44.1
+urllib3==1.25.8
