@@ -8,6 +8,8 @@ from bs4 import BeautifulSoup
 from requests.exceptions import HTTPError, ConnectionError, Timeout
 from random_user_agent.user_agent import UserAgent
 from random_user_agent.params import SoftwareName, OperatingSystem
+from stem import Signal
+from stem.control import Controller
 
 from .parse import num_pages as parse_num_pages
 from .parse import resume_hashes as parse_resume_hashes
@@ -23,21 +25,46 @@ SPECIALIZATIONS_URL = "https://api.hh.ru/specializations"
 RESUME_PAGE_URL = "https://hh.ru/search/resume?area={}&specialization={}&search_period={}&page={}"
 VACANCY_PAGE_URL = "https://api.hh.ru/vacancies?area={}&specialization={}&period={}&page={}&per_page=100"
 
+def renew_tor_connection() -> None:
+    with Controller.from_port(port=9051) as controller:
+        controller.authenticate(password='password')
+        controller.signal(Signal.NEWNYM)
+        controller.close()
 
 def download(get_url):
     @wraps(get_url)
-    def wrapper(*args, timeout=10, requests_interval=10, max_requests_number=100, break_reasons=None):
+    def wrapper(
+            *args,
+            timeout=10,
+            requests_interval=10,
+            max_requests_number=100,
+            break_reasons=None,
+            tor=False,
+    ):
         """
         :param int requests_interval: time interval between requests (sec.)
         :param int max_requests_number: maximum number of requests
         :param list break_reasons: list of reasons
+        :param bool tor: use tor
         """
         url = get_url(*args)
         break_reasons = set() if break_reasons is None else set(break_reasons)
 
+        proxies = None
+        if tor:
+            proxies = {
+                'http': 'socks5://localhost:9050',
+                'https': 'socks5://localhost:9050',
+            }
+
         for _ in range(max_requests_number):
             try:
-                request = requests.get(url, headers={'User-Agent': USER_AGENT.get_random_user_agent()}, timeout=timeout)
+                request = requests.get(
+                    url,
+                    headers={'User-Agent': USER_AGENT.get_random_user_agent()},
+                    timeout=timeout,
+                    proxies=proxies,
+                )
                 request.raise_for_status()
             except ConnectionError as connection_error:
                 print(f"Connection error occurred: {connection_error}", file=sys.stderr)
@@ -51,7 +78,10 @@ def download(get_url):
                 return request.content
 
             print(f"A second request to the {url} will be sent in {requests_interval} seconds")
-            time.sleep(requests_interval)
+            if tor:
+                renew_tor_connection()
+            else:
+                time.sleep(requests_interval)
 
         raise HTTPError(f"Page on this {url} has not been downloaded")
     return wrapper
