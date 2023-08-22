@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="parse-hh-data",
-    version="0.1.14",
+    version="0.1.15",
     author="Arina Ageeva",
     author_email="arina.a.ageeva@gmail.com",
     description="Package for parsing data (vacancies and resumes) from site hh.ru",
@@ -15,7 +15,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     install_requires=["beautifulsoup4==4.8.2",
                       "random-user-agent==1.0.1",
-                      "requests==2.23.0",
+                      "requests>=2.23.0",
                       "tqdm==4.44.1",
                       "urllib3==1.25.8"],
     classifiers=[
