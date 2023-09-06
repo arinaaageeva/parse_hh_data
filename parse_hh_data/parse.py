@@ -64,9 +64,8 @@ def get_optional_text(find_optional_element):
         :return: str or None
         """
         optional_element = find_optional_element(page)
-        return None if optional_element is None else optional_element.getText()
+        return None if optional_element is None else optional_element
     return wrapper
-
 
 @get_optional_text
 def birth_date(page):
@@ -75,6 +74,24 @@ def birth_date(page):
     :return: str or None
     """
     return page.find("span", {"data-qa": "resume-personal-birthday"})
+
+@get_optional_text
+def photo(page):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :return: str or None
+    """
+    photo = page.find("img", {"data-qa": "resume-photo-image"})
+    
+    return "" if photo is None else photo['src']
+
+@get_optional_text
+def personal_name(page):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :return: str or None
+    """
+    return page.find("h2", {"data-qa": "resume-personal-name"}).getText()
 
 
 @get_optional_text
@@ -135,6 +152,48 @@ def position_specializations(position_block):
     return profarea_specializations
 
 
+def employment_type(position_block):
+    """
+    :param bs4.Tag position_block: position block
+    :return: list
+    """
+    result = ""
+    position_block = position_block.find("div", {"class": "resume-block-container"})
+    
+    for p in position_block.findAll("p"):
+        if p != None and "Занятость" in p.getText():
+            dirty_employment = p.getText()
+            result = dirty_employment.split(":")[1]
+            
+            if isinstance(result, str):
+                result = result.strip()
+            
+            break
+
+    return result
+
+
+def schedule(position_block):
+    """
+    :param bs4.Tag position_block: position block
+    :return: list
+    """
+    result = ""
+    position_block = position_block.find("div", {"class": "resume-block-container"})
+    
+    for p in position_block.findAll("p"):
+        if p != None and "График работы" in p.getText():
+            dirty_employment = p.getText()
+            result = dirty_employment.split(":")[1]
+            
+            if isinstance(result, str):
+                result = result.strip()
+            
+            break
+
+    return result
+
+
 def position_salary(position_block):
     """
     :param bs4.Tag position_block: position block
@@ -155,12 +214,82 @@ def position_salary(position_block):
     return salary
 
 
+def contact(page):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :return: bs4.Tag
+    """
+    return page.find("div", {"data-qa": "resume-block-contacts"})
+
+
+def get_contacts(contacts):
+    """
+    :param bs4.Tag position_block: position block
+    :return: list
+    """
+    result = []
+    
+    email_div = contacts.find("div", {"data-qa": "resume-contact-email"})
+    
+    if email_div.find() != None and email_div.find().next != None:
+        email_address = email_div.find().next
+        preferred = False if email_div.find("a",{"data-qa":"resume-contact-preferred"}) is None else True
+        
+        result.append({
+            "value": email_address,
+            "preferred": preferred,
+            "type": "mail"
+        })
+        
+    phone_div = contacts.find("div", {"data-qa": "resume-contacts-phone"})
+    
+    if phone_div.find("a") != None:
+        phone_number = phone_div.find("a").getText()
+        preferred = False if phone_div.find("a",{"data-qa":"resume-contact-preferred"}) is None else True
+        
+        result.append({
+            "value": phone_number,
+            "preferred": preferred,
+            "type": "phone"
+        })
+        
+    personalsite_div = contacts.find("div", {"data-qa": "resume-personalsite-personal"})
+    
+    if personalsite_div.find("a") != None:
+        personalsite_url = personalsite_div.find("a").getText()
+        preferred = False if personalsite_div.find("a",{"data-qa":"resume-contact-preferred"}) is None else True
+        
+        result.append({
+            "value": personalsite_url,
+            "preferred": preferred,
+            "type": "phone"
+        })
+    
+    return result
+
+
 def education(page):
     """
     :param bs4.BeautifulSoup page: resume page
     :return: bs4.Tag
     """
     return page.find("div", {"class": "resume-block", "data-qa": "resume-block-education"})
+
+
+def additional_education(page):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :return: bs4.Tag
+    """
+    return page.find("div", {"class": "resume-block", "data-qa": "resume-block-additional-education"})
+
+
+def attestation_education(page):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :return: bs4.Tag
+    """
+    return page.find("div", {"class": "resume-block", "data-qa": "resume-block-attestation-education"})
 
 
 def education_level(education_block):
@@ -339,22 +468,30 @@ def resume(page):
     """
     page = page.find("div", {"id": "HH-React-Root"})
 
+    contacts = contact(page)
     resume_position = position(page)
     resume_education = education(page)
+    resume_additional_education = additional_education(page)
+    resume_attestation_education = attestation_education(page)
 
     return {
+        "personal_name": personal_name(page),
+        "photo": photo(page),
         "birth_date": birth_date(page),
         "gender": gender(page),
         "area": area(page),
+        "contacts": get_contacts(contacts),
         "title": position_title(resume_position),
         "specialization": position_specializations(resume_position),
+        "employment_type": employment_type(resume_position),
+        "schedule": schedule(resume_position),
         "salary": position_salary(resume_position),
         "education_level": education_level(resume_education),
         "education": educations(resume_education),
+        "additional_education": educations(resume_additional_education),
+        "attestation_education": educations(resume_attestation_education),
         "language": languages(page),
         "experience": experiences(page),
         "skill_set": skill_set(page),
         "skills": skills(page)
     }
-
-    return resume
