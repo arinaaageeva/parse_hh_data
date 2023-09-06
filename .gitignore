@@ -4,3 +4,4 @@
 /parse_hh_data.egg-info
 /venv
 dev.py
+/parse_hh_data/__pycache__
