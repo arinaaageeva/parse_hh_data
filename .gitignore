@@ -2,4 +2,5 @@
 /build
 /dist
 /parse_hh_data.egg-info
-
+/venv
+dev.py
