@@ -263,18 +263,39 @@ def experiences(page, format="%d-%m-%Y"):
 
             start, end = time_interval.getText().replace("\xa0", " ").split(' — ')
             
-            item_position = experience_item.find("div",  {"class": "resume-block__sub-title", "data-qa": "resume-block-experience-position"})
+            item_position = experience_item.find("div",  {"class": "bloko-text bloko-text_strong", "data-qa": "resume-block-experience-position"})
             item_position = "" if item_position is None else item_position.getText()
 
             item_description = experience_item.find("div", {"data-qa": "resume-block-experience-description"})
             description_child = item_description.findChild()
             item_description = item_description.getText() if description_child is None else str(description_child)
+            
+            item_employer = experience_item.find("div",  {"class": "bloko-text bloko-text_strong"})
+            item_employer_name = "" if item_employer is None else item_employer.getText()
+            
+            item_block_container = experience_item.find("div",  {"class": "resume-block-container"})
+            
+            item_employer_city = None
+            item_employer_site = None
 
+            if item_block_container != None and item_block_container.find("p") != None:
+                item_block_container_text = item_block_container.find("p").getText()
+                item_employer_city = item_block_container_text.split(",")[0]
+                
+                item_employer_a = item_block_container.find("p").find("a")
+                
+                if item_employer_a != None:
+                    item_employer_site = item_employer_a['href']
+            
             page_experiences.append(
                 {"start": date(start, format=format),
                  "end": date(end, format=format),
                  "position": item_position,
-                 "description": item_description}
+                 "description": item_description,
+                 "employer_name": item_employer_name,
+                 "employer_city": item_employer_city,
+                 "employer_site": item_employer_site
+                 }
             )
 
     return page_experiences
