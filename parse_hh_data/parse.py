@@ -64,9 +64,8 @@ def get_optional_text(find_optional_element):
         :return: str or None
         """
         optional_element = find_optional_element(page)
-        return None if optional_element is None else optional_element.getText()
+        return None if optional_element is None else optional_element
     return wrapper
-
 
 @get_optional_text
 def birth_date(page):
@@ -74,7 +73,35 @@ def birth_date(page):
     :param bs4.BeautifulSoup page: resume page
     :return: str or None
     """
-    return page.find("span", {"data-qa": "resume-personal-birthday"})
+    result = None
+    
+    if page != None and page.find("span", {"data-qa": "resume-personal-birthday"}) != None:
+        result = page.find("span", {"data-qa": "resume-personal-birthday"}).getText()
+    
+    return result
+
+@get_optional_text
+def photo(page):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :return: str or None
+    """
+    photo = page.find("img", {"data-qa": "resume-photo-image"})
+    
+    return "" if photo is None else photo['src']
+
+@get_optional_text
+def personal_name(page):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :return: str or None
+    """
+    result = None
+    
+    if page != None and page.find("h2", {"data-qa": "resume-personal-name"}) != None:
+        result = page.find("h2", {"data-qa": "resume-personal-name"}).getText()
+    
+    return result
 
 
 @get_optional_text
@@ -83,7 +110,7 @@ def gender(page):
     :param bs4.BeautifulSoup page: resume page
     :return: str or None
     """
-    return page.find("span", {"data-qa": "resume-personal-gender"})
+    return page.find("span", {"data-qa": "resume-personal-gender"}).getText()
 
 
 @get_optional_text
@@ -92,7 +119,55 @@ def area(page):
     :param bs4.BeautifulSoup page: resume page
     :return: str or None
     """
-    return page.find("span", {"data-qa": "resume-personal-address"})
+    return page.find("span", {"data-qa": "resume-personal-address"}).getText()
+
+
+@get_optional_text
+def metro(page):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :return: str or None
+    """
+    result = None
+    
+    data = page.find("span", {"data-qa": "resume-personal-metro"})
+    
+    if data != None:
+        result = data.getText()
+    
+    return result
+
+
+@get_optional_text
+def business_trip_agreeable(page):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :return: str or None
+    """
+    result = False
+    
+    span = page.find("span", {"data-qa": "resume-personal-metro"})
+    
+    if span != None and span.parent != None and span.parent.getText() != None:
+        result = "готов к командировкам" in span.parent.getText()
+        
+    return result
+
+
+@get_optional_text
+def relocation_agreeable(page):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :return: str or None
+    """
+    result = False
+    
+    span = page.find("span", {"data-qa": "resume-personal-metro"})
+    
+    if span.parent != None and span.parent.getText() != None:
+        result = "готов к переезду" in span.parent.getText()
+        
+    return result
 
 
 def position(page):
@@ -135,12 +210,53 @@ def position_specializations(position_block):
     return profarea_specializations
 
 
+def employment_type(position_block):
+    """
+    :param bs4.Tag position_block: position block
+    :return: list
+    """
+    result = ""
+    position_block = position_block.find("div", {"class": "resume-block-container"})
+    
+    for p in position_block.findAll("p"):
+        if p != None and "Занятость" in p.getText():
+            dirty_employment = p.getText()
+            result = dirty_employment.split(":")[1]
+            
+            if isinstance(result, str):
+                result = result.strip()
+            
+            break
+
+    return result
+
+
+def schedule(position_block):
+    """
+    :param bs4.Tag position_block: position block
+    :return: list
+    """
+    result = ""
+    position_block = position_block.find("div", {"class": "resume-block-container"})
+    
+    for p in position_block.findAll("p"):
+        if p != None and "График работы" in p.getText():
+            dirty_employment = p.getText()
+            result = dirty_employment.split(":")[1]
+            
+            if isinstance(result, str):
+                result = result.strip()
+            
+            break
+
+    return result
+
 def position_salary(position_block):
     """
     :param bs4.Tag position_block: position block
     :return: dict
     """
-    salary = position_block.find("span", {"class": "resume-block__salary resume-block__title-text_salary",
+    salary = position_block.find("span", {"class": "resume-block__salary",
                                           "data-qa": "resume-block-salary"})
     amount = None
     currency = None
@@ -155,12 +271,88 @@ def position_salary(position_block):
     return salary
 
 
+def contact(page):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :return: bs4.Tag
+    """
+    return page.find("div", {"data-qa": "resume-block-contacts"})
+
+
+def get_contacts(contacts):
+    """
+    :param bs4.Tag position_block: position block
+    :return: list
+    """
+    result = []
+    
+    email_div = contacts.find("div", {"data-qa": "resume-contact-email"})
+    
+    if email_div.find() != None and email_div.find().next != None:
+        email_address = email_div.find().next
+        preferred = False if email_div.find("a",{"data-qa":"resume-contact-preferred"}) is None else True
+        
+        result.append({
+            "value": email_address,
+            "is_preferred": preferred,
+            "is_verified": None,
+            "type": "mail"
+        })
+        
+    phone_div = contacts.find("div", {"data-qa": "resume-contacts-phone"})
+    
+    if phone_div != None and phone_div.find("a") != None:
+        phone_number = phone_div.find("a").getText()
+        preferred = False if phone_div.find("a",{"data-qa":"resume-contact-preferred"}) is None else True
+        
+        verified_div = phone_div.find("div",{"class": "resume-search-item-phone-verification-status"})
+        verified = False if verified_div.getText() != 'Телефон подтвержден' else True
+        
+        result.append({
+            "value": phone_number,
+            "is_preferred": preferred,
+            "is_verified": verified,
+            "type": "phone"
+        })
+        
+    personalsite_div = contacts.find("div", {"data-qa": "resume-personalsite-personal"})
+    
+    if personalsite_div != None and personalsite_div.find("a") != None:
+        personalsite_url = personalsite_div.find("a").getText()
+        preferred = False if personalsite_div.find("a",{"data-qa":"resume-contact-preferred"}) is None else True
+        
+        result.append({
+            "value": personalsite_url,
+            "is_preferred": preferred,
+            "is_verified": None,
+            "type": "link"
+        })
+    
+    return result
+
+
 def education(page):
     """
     :param bs4.BeautifulSoup page: resume page
     :return: bs4.Tag
     """
     return page.find("div", {"class": "resume-block", "data-qa": "resume-block-education"})
+
+
+def additional_education(page):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :return: bs4.Tag
+    """
+    return page.find("div", {"class": "resume-block", "data-qa": "resume-block-additional-education"})
+
+
+def attestation_education(page):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :return: bs4.Tag
+    """
+    return page.find("div", {"class": "resume-block", "data-qa": "resume-block-attestation-education"})
 
 
 def education_level(education_block):
@@ -205,6 +397,47 @@ def educations(education_block):
     return page_educations
 
 
+def driver_experience(page):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :return: bs4.Tag
+    """
+    return page.find("div", {"class": "resume-block", "data-qa": "resume-block-driver-experience"})
+
+
+def has_vehicle(resume_driver_experience):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :return: bs4.Tag
+    """
+    result = None
+    
+    if resume_driver_experience != None:
+        div = resume_driver_experience.find("div", {"class": "resume-block-item-gap"})
+        result = div != None and div.getText() != None and "Имеется собственный автомобиль" in div.getText()
+    
+    return result
+
+
+
+def driver_license(resume_driver_experience):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :return: bs4.Tag
+    """
+    result = None
+    
+    if resume_driver_experience != None:
+        div = resume_driver_experience.find("div", {"class": "resume-block-item-gap"})
+
+        if div != None and div.getText() != None:
+            splited = div.getText().split("\xa0")
+            if len(splited) == 2:
+                result = splited[1]
+        
+    return result
+
+
 def languages(page):
     """
     :param bs4.BeautifulSoup page: resume page
@@ -225,6 +458,52 @@ def languages(page):
 
     return page_languages
 
+
+def recommendations(page):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :return: list
+    """
+    page_recommendations = []
+    page = page.find("div", {"class": "resume-block", "data-qa": "resume-block-recommendation"})
+
+    if page is not None:
+        for recomendation in page.findAll("div", {"data-qa": "recommendation-item-title"}):
+            title = recomendation.getText()
+            description = None
+            
+            if len(recomendation.parent.findAll("div")) == 2 and recomendation.parent.findAll("div")[1] != None:
+                description = recomendation.parent.findAll("div")[1].getText()
+            
+            page_recommendations.append({"title": title, "description": description})
+
+    return page_recommendations
+
+
+def certificates(page):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :return: list
+    """
+    page_certificates = []
+    page = page.find("div", {"class": "resume-block", "data-qa": "resume-block-certificate"})
+
+    if page is not None:
+        for certificate in page.findAll("a", {"class": "bloko-link"}):
+            title = certificate.getText()
+            url = certificate['href']
+            year = None
+            
+            for parent in certificate.parents:
+                year_div = parent.find("div",{"class": "resume-certificates-view__year-group-title"})
+                
+                if year_div != None:
+                    year = year_div.getText()
+                    break
+    
+            page_certificates.append({"title": title, "url": url, "year": year})
+
+    return page_certificates
 
 def date(date, format="%d-%m-%Y"):
     """
@@ -263,21 +542,62 @@ def experiences(page, format="%d-%m-%Y"):
 
             start, end = time_interval.getText().replace("\xa0", " ").split(' — ')
             
-            item_position = experience_item.find("div",  {"class": "resume-block__sub-title", "data-qa": "resume-block-experience-position"})
+            item_position = experience_item.find("div",  {"class": "bloko-text bloko-text_strong", "data-qa": "resume-block-experience-position"})
             item_position = "" if item_position is None else item_position.getText()
 
             item_description = experience_item.find("div", {"data-qa": "resume-block-experience-description"})
             description_child = item_description.findChild()
             item_description = item_description.getText() if description_child is None else str(description_child)
+            
+            item_employer = experience_item.find("div",  {"class": "bloko-text bloko-text_strong"})
+            item_employer_name = "" if item_employer is None else item_employer.getText()
+            
+            item_block_container = experience_item.find("div",  {"class": "resume-block-container"})
+            
+            item_employer_city = None
+            item_employer_site = None
 
+            if item_block_container != None and item_block_container.find("p") != None:
+                item_block_container_text = item_block_container.find("p").getText()
+                item_employer_city = item_block_container_text.split(",")[0]
+                
+                item_employer_a = item_block_container.find("p").find("a")
+                
+                if item_employer_a != None:
+                    item_employer_site = item_employer_a['href']
+            
             page_experiences.append(
                 {"start": date(start, format=format),
                  "end": date(end, format=format),
                  "position": item_position,
-                 "description": item_description}
+                 "description": item_description,
+                 "employer_name": item_employer_name,
+                 "employer_city": item_employer_city,
+                 "employer_site": item_employer_site
+                 }
             )
 
     return page_experiences
+
+
+def additional(page, format="%d-%m-%Y"):
+    """
+    :param bs4.BeautifulSoup page: resume page
+    :param format str: desired data format
+    :return: list
+    """
+    result = []
+    page = page.find("div", {"class": "resume-block", "data-qa": "resume-block-additional"})
+
+    if page is not None:
+        div = page.find("div", {"class":"resume-block-item-gap"})
+        
+        if div is not None:
+            for p in div.findAll("p"):
+                result.append(p.getText())
+            
+
+    return result
 
 
 def skill_set(page):
@@ -318,22 +638,39 @@ def resume(page):
     """
     page = page.find("div", {"id": "HH-React-Root"})
 
+    contacts = contact(page)
     resume_position = position(page)
     resume_education = education(page)
+    resume_additional_education = additional_education(page)
+    resume_attestation_education = attestation_education(page)
+    resume_driver_experience = driver_experience(page)
 
     return {
+        "personal_name": personal_name(page),
+        "photo": photo(page),
         "birth_date": birth_date(page),
         "gender": gender(page),
         "area": area(page),
+        "metro": metro(page),
+        "business_trip_agreeable": business_trip_agreeable(page),
+        "relocation_agreeable": business_trip_agreeable(page),
+        "contacts": get_contacts(contacts),
         "title": position_title(resume_position),
         "specialization": position_specializations(resume_position),
+        "employment_type": employment_type(resume_position),
+        "schedule": schedule(resume_position),
         "salary": position_salary(resume_position),
         "education_level": education_level(resume_education),
         "education": educations(resume_education),
+        "additional_education": educations(resume_additional_education),
+        "attestation_education": educations(resume_attestation_education),
+        "has_vehicle": has_vehicle(resume_driver_experience),
+        "driver_license": driver_license(resume_driver_experience),
         "language": languages(page),
+        "recommendations": recommendations(page),
+        "certificates": certificates(page),
         "experience": experiences(page),
+        "additional": additional(page),
         "skill_set": skill_set(page),
         "skills": skills(page)
     }
-
-    return resume
