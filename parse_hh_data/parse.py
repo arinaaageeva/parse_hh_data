@@ -288,7 +288,7 @@ def get_contacts(contacts):
     
     email_div = contacts.find("div", {"data-qa": "resume-contact-email"})
     
-    if email_div.find() != None and email_div.find().next != None:
+    if email_div != None and email_div.find() != None and email_div.find().next != None:
         email_address = email_div.find().next
         preferred = False if email_div.find("a",{"data-qa":"resume-contact-preferred"}) is None else True
         
@@ -301,7 +301,7 @@ def get_contacts(contacts):
         
     phone_div = contacts.find("div", {"data-qa": "resume-contacts-phone"})
     
-    if phone_div != None and phone_div.find("a") != None:
+    if phone_div != None and phone_div != None and phone_div.find("a") != None:
         phone_number = phone_div.find("a").getText()
         preferred = False if phone_div.find("a",{"data-qa":"resume-contact-preferred"}) is None else True
         
