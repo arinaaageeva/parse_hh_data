@@ -293,7 +293,7 @@ def get_contacts(contacts):
         preferred = False if email_div.find("a",{"data-qa":"resume-contact-preferred"}) is None else True
         
         result.append({
-            "value": email_address,
+            "value": str(email_address),
             "is_preferred": preferred,
             "is_verified": None,
             "type": "mail"
