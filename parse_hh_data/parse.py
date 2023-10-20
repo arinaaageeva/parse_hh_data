@@ -286,47 +286,48 @@ def get_contacts(contacts):
     """
     result = []
     
-    email_div = contacts.find("div", {"data-qa": "resume-contact-email"})
-    
-    if email_div != None and email_div.find() != None and email_div.find().next != None:
-        email_address = email_div.find().next
-        preferred = False if email_div.find("a",{"data-qa":"resume-contact-preferred"}) is None else True
+    if contacts != None:
+        email_div = contacts.find("div", {"data-qa": "resume-contact-email"})
         
-        result.append({
-            "value": str(email_address),
-            "is_preferred": preferred,
-            "is_verified": None,
-            "type": "mail"
-        })
+        if email_div != None and email_div.find() != None and email_div.find().next != None:
+            email_address = email_div.find().next
+            preferred = False if email_div.find("a",{"data-qa":"resume-contact-preferred"}) is None else True
+            
+            result.append({
+                "value": str(email_address),
+                "is_preferred": preferred,
+                "is_verified": None,
+                "type": "mail"
+            })
+            
+        phone_div = contacts.find("div", {"data-qa": "resume-contacts-phone"})
         
-    phone_div = contacts.find("div", {"data-qa": "resume-contacts-phone"})
-    
-    if phone_div != None and phone_div != None and phone_div.find("a") != None:
-        phone_number = phone_div.find("a").getText()
-        preferred = False if phone_div.find("a",{"data-qa":"resume-contact-preferred"}) is None else True
+        if phone_div != None and phone_div != None and phone_div.find("a") != None:
+            phone_number = phone_div.find("a").getText()
+            preferred = False if phone_div.find("a",{"data-qa":"resume-contact-preferred"}) is None else True
+            
+            verified_div = phone_div.find("div",{"class": "resume-search-item-phone-verification-status"})
+            verified = False if verified_div.getText() != 'Телефон подтвержден' else True
+            
+            result.append({
+                "value": phone_number,
+                "is_preferred": preferred,
+                "is_verified": verified,
+                "type": "phone"
+            })
+            
+        personalsite_div = contacts.find("div", {"data-qa": "resume-personalsite-personal"})
         
-        verified_div = phone_div.find("div",{"class": "resume-search-item-phone-verification-status"})
-        verified = False if verified_div.getText() != 'Телефон подтвержден' else True
-        
-        result.append({
-            "value": phone_number,
-            "is_preferred": preferred,
-            "is_verified": verified,
-            "type": "phone"
-        })
-        
-    personalsite_div = contacts.find("div", {"data-qa": "resume-personalsite-personal"})
-    
-    if personalsite_div != None and personalsite_div.find("a") != None:
-        personalsite_url = personalsite_div.find("a").getText()
-        preferred = False if personalsite_div.find("a",{"data-qa":"resume-contact-preferred"}) is None else True
-        
-        result.append({
-            "value": personalsite_url,
-            "is_preferred": preferred,
-            "is_verified": None,
-            "type": "link"
-        })
+        if personalsite_div != None and personalsite_div.find("a") != None:
+            personalsite_url = personalsite_div.find("a").getText()
+            preferred = False if personalsite_div.find("a",{"data-qa":"resume-contact-preferred"}) is None else True
+            
+            result.append({
+                "value": personalsite_url,
+                "is_preferred": preferred,
+                "is_verified": None,
+                "type": "link"
+            })
     
     return result
 
